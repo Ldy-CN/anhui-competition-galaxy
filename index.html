@@ -164,6 +164,20 @@
 
   #hint{position:absolute;left:50%;transform:translateX(-50%);bottom:18px;z-index:16;font-size:11px;
     color:rgba(154,167,199,.65);pointer-events:none;letter-spacing:1px}
+  #aiBar{position:absolute;left:50%;transform:translateX(-50%);bottom:40px;z-index:16;max-width:calc(100vw - 60px);
+    font-size:10.5px;color:rgba(200,150,90,.85);background:rgba(60,40,10,.55);border:1px solid rgba(200,150,90,.3);
+    border-radius:14px;padding:5px 14px;text-align:center;line-height:1.6}
+  #aiMore{color:#e8c37a;text-decoration:underline;cursor:pointer;pointer-events:auto}
+  #aiModal{position:fixed;inset:0;z-index:60;display:none;align-items:center;justify-content:center;
+    background:rgba(0,0,0,.65);backdrop-filter:blur(3px)}
+  #aiModal.open{display:flex}
+  .aim{width:min(560px,92vw);max-height:82vh;overflow-y:auto;background:var(--panel);border:1px solid var(--line);
+    border-radius:16px;padding:22px 26px;box-shadow:0 24px 80px rgba(0,0,0,.6)}
+  .aimt{font-size:16px;font-weight:bold;color:var(--gold);margin-bottom:12px}
+  .aimb p{font-size:12.5px;line-height:1.9;color:#c9d4f5;margin-bottom:9px}
+  .aimb b{color:var(--gold);font-weight:normal}
+  #aiClose{width:100%;margin-top:6px;padding:9px;border-radius:20px;border:none;cursor:pointer;
+    background:linear-gradient(135deg,#3b6cff,#7a5bff);color:#fff;font-size:13px}
   @media (max-width:760px){
     #panel{width:100vw;right:-100vw} #panel.open{right:0}
     #legend{display:none} .stat{display:none}
@@ -289,6 +303,22 @@
 </div>
 
 <div id="hint">拖拽旋转 · 滚轮缩放 · 近处卡片自动变淡透出后面 · 点击卡片查看详情</div>
+
+<div id="aiBar">⚠ 本站全部内容由 AI 依据各赛事官网公开通知整理生成，仅供参考 · 报名信息请以官网最新通知为准 · <span id="aiMore">查看完整声明</span></div>
+
+<div id="aiModal">
+  <div class="aim">
+    <div class="aimt">AI 生成内容声明</div>
+    <div class="aimb">
+      <p><b>1. 内容来源：</b>本页面全部竞赛信息（含赛事简介、赛道说明、报名窗口、组队要求与技能需求标注等）由 AI 根据各赛事官方网站公开发布的通知、规程与介绍<b>整理生成</b>，数据检索日期为 2026 年 10 月 23 日。</p>
+      <p><b>2. 推荐分仅供参考：</b>推荐分与适配标注由页面内置的评分模型基于你填写的画像自动计算，仅为参考建议，不构成任何形式的官方认定、评奖承诺或升学依据。</p>
+      <p><b>3. 以官网为准：</b>竞赛的报名时间、赛制、赛道设置、奖项规则等信息<b>以各赛事官方网站发布的最新通知为准</b>；本页信息可能滞后于官网更新，或存在整理疏漏。</p>
+      <p><b>4. 报名前请核实：</b>报名前务必前往对应官网（详情页已提供链接或渠道说明）核对原始通知，并向本校教务处 / 学院确认报名渠道与综测认定政策。</p>
+      <p><b>5. 非官方声明：</b>本页面为非官方的个人学习参考工具，与安徽省教育厅及各赛事主办方无任何隶属或合作关系。</p>
+    </div>
+    <button id="aiClose">我知道了</button>
+  </div>
+</div>
 <div id="tip"></div>
 
 <div id="listView"><div class="grid" id="listGrid"></div></div>
@@ -1105,6 +1135,9 @@ function openPanel(it){
     <div class="kv"><div class="k">组队 要求</div><div class="v">${it.team}</div></div>
     ${notes?`<div class="kv"><div class="k">定制 亮点</div><div class="v">${notes}</div></div>`:''}
     <div class="kv"><div class="k">推荐 理由（针对你的画像）</div><div class="why">${it.why}</div></div>
+    <div style="font-size:10.5px;color:rgba(154,167,199,.75);margin-top:14px;line-height:1.7;border-top:1px dashed var(--line);padding-top:9px">
+      ℹ 本条目内容由 AI 依据该赛事官网公开通知整理（检索于 2026-10-23），仅供参考；报名与赛制细节请前往官网核对最新通知。
+    </div>
   `;
   panel.classList.add('open');
 }
@@ -1282,6 +1315,14 @@ document.getElementById('legendCats').innerHTML = CATS.map(c=>
     applyProfile({ major:'other', grade:2, school:'eb', skills:[], interests:[], goal:'' });
     syncUI();
   };
+})();
+
+/* ---- AI 声明模态框 ---- */
+(function aiNotice(){
+  const modal = document.getElementById('aiModal');
+  document.getElementById('aiMore').onclick = ()=> modal.classList.add('open');
+  document.getElementById('aiClose').onclick = ()=> modal.classList.remove('open');
+  modal.addEventListener('click', e => { if (e.target === modal) modal.classList.remove('open'); });
 })();
 
 
