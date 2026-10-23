@@ -84,6 +84,13 @@
   .sk{padding:5px 11px;border-radius:16px;font-size:11.5px;line-height:1.5}
   .sk.ok{background:rgba(74,222,128,.12);border:1px solid rgba(74,222,128,.4);color:#b8f5cf}
   .sk.no{background:rgba(148,163,184,.08);border:1px dashed rgba(148,163,184,.45);color:var(--sub)}
+  .trk{border:1px solid var(--line);border-radius:10px;padding:9px 12px;margin-bottom:7px;background:rgba(255,255,255,.02)}
+  .trk.strong{border-color:rgba(74,222,128,.45);background:rgba(74,222,128,.05)}
+  .trk .tn{font-size:12.5px;font-weight:bold;color:#dbe4ff;display:flex;justify-content:space-between;align-items:center;gap:8px}
+  .trk .tb{font-size:10px;padding:2px 8px;border-radius:10px;flex-shrink:0;font-weight:normal}
+  .trk .tnote{font-size:11px;color:var(--sub);margin-top:3px;line-height:1.55}
+  .trk .ts{display:flex;gap:4px;flex-wrap:wrap;margin-top:6px}
+  .trk .ts .sk{padding:2px 8px;font-size:10px}
 
   /* ---------- 详情面板 ---------- */
   #panel{position:absolute;top:0;right:-430px;width:410px;height:100%;z-index:30;
@@ -371,7 +378,18 @@ let profile = (() => {
   return { major:'other', grade:2, school:'eb', skills:[], interests:[], goal:'' };
 })();
 
-/* 评分：五维加权（专业35+技能25+年级10+可达15+兴趣10）+ 目的加成5，cap 100 */
+/* 赛道级适配度：技能命中率 + 专业微调 → strong/mid/low/no 四档 */
+function trackFit(tr, it, pf){
+  if (tr.vet) return { sc:-1, tag:'no' };
+  const needs = tr.s || [];
+  const hits = needs.filter(x => (pf.skills||[]).indexOf(x) >= 0).length;
+  let sc = needs.length ? hits/needs.length : 0.5;
+  const mRow = MAJOR_MAP[pf.major] || MAJOR_MAP.other;
+  sc += ((mRow[it.cat] != null ? mRow[it.cat] : 20)/35 - 0.5)*0.4;
+  return { sc: sc, tag: sc >= 0.55 ? 'strong' : (sc >= 0.3 ? 'mid' : 'low') };
+}
+
+/* 评分：五维加权（专业35+技能25+年级10+可达15+兴趣10）+ 目的加成5 + 赛道契合6，cap 100 */
 function computeScoreDetail(it, pf){
   const parts = {};
   const mRow = MAJOR_MAP[pf.major] || MAJOR_MAP.other;
@@ -385,12 +403,17 @@ function computeScoreDetail(it, pf){
   parts.reach = Math.max(0, Math.round(15 - Math.abs((it.intensity||3) - sb)*3.5));
   parts.interest = (pf.interests||[]).includes(it.cat) ? 10 : 0;
   parts.goal = (it.goal && pf.goal && it.goal.indexOf(pf.goal) >= 0) ? 5 : 0;
+  parts.track = 0;
+  if (it.tracks && it.tracks.length){
+    const best = Math.max.apply(null, it.tracks.map(tr => trackFit(tr, it, pf).sc));
+    parts.track = best >= 0.55 ? 6 : (best >= 0.3 ? 3 : 0);
+  }
   const restricted = it.restrict && (
     (it.restrict==='teacher' && pf.major!=='teacher') ||
     (it.restrict==='pharmacy' && pf.major!=='med') ||
     (it.restrict==='vocational' && pf.school!=='zk'));
-  if (restricted) { parts.major=0; parts.skill=0; parts.year=0; parts.reach=5; parts.interest=0; parts.goal=0; }
-  const total = restricted ? 5 : Math.min(100, parts.major+parts.skill+parts.year+parts.reach+parts.interest+parts.goal);
+  if (restricted) { parts.major=0; parts.skill=0; parts.year=0; parts.reach=5; parts.interest=0; parts.goal=0; parts.track=0; }
+  const total = restricted ? 5 : Math.min(100, parts.major+parts.skill+parts.year+parts.reach+parts.interest+parts.goal+parts.track);
   return { total, parts, restricted };
 }
 function computeScore(it, pf){ return computeScoreDetail(it, pf).total; }
@@ -847,6 +870,73 @@ const META = {
 };
 /* 挂载到竞赛条目 */
 Object.keys(META).forEach(n => { const hit = DATA.find(d => d.name === n); if (hit) Object.assign(hit, META[n]); });
+
+/* ---------- 赛道级数据（依据官网通知/规程整理，检索 2026-10-23；vet=画像不匹配群体不可报） ---------- */
+const TRACKS = {
+  '"西门子杯"中国智能制造挑战赛（CIMC）': [
+    { n:'智能装备设计与数字孪生制造', s:['modeling','coding'], note:'三维建模+数字孪生仿真，建模/仿真强项的直接对口赛道' },
+    { n:'离散行业自动化（逻辑算法）', s:['coding','mcu'], note:'PLC 逻辑控制算法设计与调试' },
+    { n:'离散行业自动化（工程实践）', s:['mcu','circuit','coding'], note:'偏工程落地的自动化实现' },
+    { n:'离散行业运动控制', s:['mcu','modeling'], note:'伺服/电机运动控制，机械+电控交叉' },
+    { n:'流程行业自动化', s:['coding','circuit'], note:'连续过程控制系统（PCS/DCS 仿真）' },
+    { n:'信息化网络化', s:['coding'], note:'工业网络与信息化集成' },
+    { n:'工业嵌入式系统开发（试）', s:['mcu','coding','circuit'], note:'限本专科 1-4 年级，嵌入式软件开发' },
+    { n:'工业硬件研发', s:['circuit','mcu'], note:'硬件电路设计与研发' },
+    { n:'精密智造与协作机器人', s:['modeling','mcu'], note:'协作机器人应用与精密制造' },
+    { n:'智能制造通识（试）', s:[], note:'限本专科 1-2 年级，低门槛入门赛道，大二正合适' },
+    { n:'自由探索', s:[], note:'自选题创新方向，需自拟方案' },
+  ],
+  '安徽省机器人大赛': [
+    { n:'驱动与控制系统赛道', s:['mcu','circuit'], note:'"最小系统板+功能模块"：嵌入式硬件搭建+驱动开发+传感器电机控制，机电本命赛道' },
+    { n:'仿真交互赛道', s:['modeling','coding'], note:'机器人仿真，三维建模与仿真基础直接可用' },
+    { n:'机器人主赛道', s:['mcu','modeling'], note:'仿人机器人短跑/障碍/舞蹈、轮式救援、机器视觉搬运等' },
+    { n:'具身智能赛道', s:['coding','modeling'], note:'具身智能方向，偏 AI 与机器人结合' },
+    { n:'低空经济技术应用赛道', s:['mcu','coding','modeling'], note:'无人机应用方向' },
+    { n:'算法设计赛道', s:['coding'], note:'类 CCPC 程序设计，纯算法比拼' },
+  ],
+  '全国大学生智能汽车竞赛（安徽赛区）': [
+    { n:'室内赛道（摄像头/电磁组等）', s:['mcu','coding','circuit'], note:'经典竞速：循迹、避障与速度优化' },
+    { n:'缩微赛道（飞檐走壁/疯狂电路/蚂蚁搬家）', s:['circuit','mcu'], note:'门槛较低的入门赛项，适合首年练手' },
+    { n:'室外赛道（ROS无人车/5G远程驾驶等）', s:['coding','mcu'], note:'综合度最高的无人驾驶方向，投入大' },
+  ],
+  '安徽省大学生节能减排社会实践与科技竞赛（暨国赛选拔）': [
+    { n:'主赛道 · 科技作品（实物/软件/设计）', s:['modeling','mcu','writing'], note:'三维方案+实物/仿真作品，可发挥建模优势' },
+    { n:'主赛道 · 社会实践调研报告', s:['writing','data'], note:'调研报告类，写作与数据分析为主' },
+    { n:'产业赛道（企业命题，与主赛道同质等效）', s:['modeling','writing'], note:'围绕企业命题提交方案，材料单独报送' },
+  ],
+  '中国大学生工程实践与创新能力大赛（安徽赛区选拔赛）': [
+    { n:'企业虚拟仿真赛项', s:['modeling','coding'], note:'虚拟仿真平台上的工程运营，建模与仿真强项对口' },
+    { n:'智能物流搬运赛项', s:['mcu','modeling','coding'], note:'循迹搬运机器人，机械+电控+算法综合' },
+    { n:'智能网联汽车设计赛项', s:['coding','mcu'], note:'智能车方向设计与实现' },
+    { n:'水下管道智能检测赛项', s:['mcu','circuit'], note:'水下检测装置设计制作' },
+  ],
+  '中国大学生计算机设计大赛（安徽省级赛）': [
+    { n:'人工智能应用', s:['coding','data'], note:'AI 应用开发，需一定编程与算法基础' },
+    { n:'大数据应用', s:['data','coding'], note:'数据采集、分析与可视化' },
+    { n:'物联网应用', s:['mcu','coding'], note:'感知+联网的软硬件综合作品' },
+    { n:'数媒动漫与游戏 / 数媒静态设计', s:['design','modeling'], note:'三维建模渲染可迁移到数字媒体作品' },
+    { n:'软件应用与开发', s:['coding'], note:'Web/APP/管理系统类软件开发' },
+    { n:'信息可视化设计', s:['design','data'], note:'数据可视化与信息图形设计' },
+    { n:'微课与AI辅助教学', s:['design','writing'], note:'教学微课制作，轻技术重表达' },
+  ],
+  '中国国际大学生创新大赛（原"互联网+"）': [
+    { n:'高教主赛道', s:['speech','writing','modeling'], note:'本科生主战场：创意组/初创组，项目路演答辩' },
+    { n:'产业赛道', s:['speech','writing','modeling'], note:'企业命题方向，产教融合项目' },
+    { n:'"青年红色筑梦之旅"赛道', s:['speech','writing'], note:'乡村振兴/公益方向项目' },
+    { n:'职教赛道', s:[], note:'仅限职业院校学生，本科不可报', vet:true },
+    { n:'萌芽赛道', s:[], note:'仅限中学生，不适用', vet:true },
+  ],
+  '"挑战杯"全国大学生系列科技学术竞赛（大挑/创业计划）': [
+    { n:'课外学术科技作品竞赛（大挑）', s:['writing','modeling','data'], note:'科技论文/调查报告/科技发明制作，与节能减排作品可联动' },
+    { n:'中国大学生创业计划竞赛（小挑）', s:['speech','writing'], note:'商业计划书+路演，偶数年举办' },
+  ],
+  '中国高校智能机器人创意大赛': [
+    { n:'家用智能机器人（未来生活）主题', s:['modeling','mcu'], note:'面向未来生活的智能机器人创意方案' },
+    { n:'未来技术/创意概念主题', s:['modeling'], note:'方案+三维建模+仿真演示即可，无需实物' },
+    { n:'具身智能等新技术主题', s:['coding','modeling'], note:'偏 AI 与机器人新技术应用' },
+  ],
+};
+Object.keys(TRACKS).forEach(n => { const hit = DATA.find(d => d.name === n); if (hit) hit.tracks = TRACKS[n]; });
 /* 按关键词匹配挂到各赛事（INTROS 关键词经校验互不冲突，61/61 全命中） */
 INTROS.forEach(x => { const hit = DATA.find(d => d.name === x.k); if (hit) hit.intro = x.t; });
 
@@ -941,7 +1031,33 @@ function openPanel(it){
     ['可达性', det.parts.reach, 15],
     ['兴趣方向', det.parts.interest, 10],
     ['目的加成', det.parts.goal, 5],
+    ['赛道契合', det.parts.track, 6],
   ];
+  /* 最适配赛道 + 赛道细分推荐（有多赛道的赛事） */
+  let bestTrack = '', trackHtml = '';
+  if (it.tracks && it.tracks.length){
+    const rows = it.tracks.map(tr => ({ tr: tr, f: trackFit(tr, it, profile) })).sort((a,b)=>b.f.sc-a.f.sc);
+    bestTrack = rows[0].tr.n;
+    const badges = {
+      strong:['⭐ 强烈对口','#b8f5cf','rgba(74,222,128,.15)','rgba(74,222,128,.4)'],
+      mid:['✓ 可以参与','#c9d4ff','rgba(91,124,255,.15)','rgba(91,124,255,.4)'],
+      low:['△ 谨慎选择','#94a3b8','rgba(148,163,184,.08)','rgba(148,163,184,.4)'],
+      no:['⛔ 不适用','#fca5a5','rgba(252,165,165,.1)','rgba(252,165,165,.35)'],
+    };
+    trackHtml = '<div class="kv"><div class="k">赛道 细分推荐（共 ' + it.tracks.length + ' 条赛道，按与你画像的适配度排序）</div>' +
+      rows.map(r=>{
+        const b = badges[r.f.tag];
+        const needs = r.tr.s || [];
+        const sks = needs.length ? '<span class="ts">' + needs.map(s=>{
+          const has = (profile.skills||[]).indexOf(s) >= 0;
+          return '<span class="sk ' + (has?'ok':'no') + '">' + (SKILL_LABELS[s]||s) + '</span>';
+        }).join('') + '</span>' : '';
+        return '<div class="trk ' + (r.f.tag==='strong'?'strong':'') + '"><div class="tn"><span>' + r.tr.n +
+          '</span><span class="tb" style="color:' + b[1] + ';background:' + b[2] + ';border:1px solid ' + b[3] + '">' + b[0] + '</span></div>' +
+          '<div class="tnote">' + r.tr.note + '</div>' + sks + '</div>';
+      }).join('') + '</div>';
+  }
+  const bestLine = bestTrack ? '<div style="font-size:12px;margin:-2px 0 12px;color:#c9d4f5">🎯 该赛下与你最匹配的赛道：<b style="color:var(--gold)">' + bestTrack + '</b></div>' : '';
   const dimsHtml = '<div class="dims">' + dimRows.map(r=>
     `<div class="dim"><span class="dn">${r[0]}</span><span class="db"><i style="width:${(r[1]/r[2]*100).toFixed(0)}%"></i></span><span class="dv">${r[1]}/${r[2]}</span></div>`
   ).join('') + '</div>' + (det.restricted
@@ -976,7 +1092,9 @@ function openPanel(it){
       </div>
     </div>
     ${dimsHtml}
+    ${bestLine}
     ${skillHtml}
+    ${trackHtml}
     <div class="kv"><div class="k">报名 时间</div><div class="v">${windowText(it)}</div></div>
     <div class="kv"><div class="k">比赛 时间</div><div class="v">${it.when}</div></div>
     ${it.intro?`<div class="kv"><div class="k">赛事 简介（依据官网通知整理）</div><div class="v" style="font-size:12.5px;color:#c9d4f5;line-height:1.85">${it.intro}</div></div>`:''}
