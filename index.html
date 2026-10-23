@@ -80,6 +80,10 @@
   .dim .db{flex:1;height:5px;border-radius:3px;background:rgba(255,255,255,.07);overflow:hidden}
   .dim .db i{display:block;height:100%;background:linear-gradient(90deg,#3b6cff,#7a5bff);border-radius:3px}
   .dim .dv{width:38px;text-align:right;flex-shrink:0}
+  .skillmatch{display:flex;gap:6px;flex-wrap:wrap}
+  .sk{padding:5px 11px;border-radius:16px;font-size:11.5px;line-height:1.5}
+  .sk.ok{background:rgba(74,222,128,.12);border:1px solid rgba(74,222,128,.4);color:#b8f5cf}
+  .sk.no{background:rgba(148,163,184,.08);border:1px dashed rgba(148,163,184,.45);color:var(--sub)}
 
   /* ---------- 详情面板 ---------- */
   #panel{position:absolute;top:0;right:-430px;width:410px;height:100%;z-index:30;
@@ -944,6 +948,23 @@ function openPanel(it){
     ? '<div style="font-size:11px;color:#fca5a5;background:rgba(252,165,165,.08);border:1px solid rgba(252,165,165,.3);border-radius:8px;padding:7px 10px;margin-bottom:12px;line-height:1.6">⚠ 该赛事仅限特定群体参加（师范类 / 医学药学类 / 职业院校在校生），与你的画像不匹配，仅供参考。</div>'
     : '');
   const notes = it.note.map(n=>`<span class="noteTag">${n}</span>`).join('');
+  /* 技能需求对照：该赛项需要什么 × 你是否掌握 */
+  let skillHtml = '';
+  if (it.skills && it.skills.length){
+    const own = it.skills.filter(s => (profile.skills||[]).indexOf(s) >= 0);
+    const chips = it.skills.map(s=>{
+      const has = own.indexOf(s) >= 0;
+      const label = SKILL_LABELS[s] || s;
+      return `<span class="sk ${has?'ok':'no'}">${has?'✓ 已掌握':'✗ 未掌握'} · ${label}</span>`;
+    }).join('');
+    const full = own.length === it.skills.length;
+    skillHtml = `<div class="kv"><div class="k">技能 需求对照（${full ? '✓ 与你的技能完全匹配' : `你已掌握 ${own.length}/${it.skills.length} 项`}）</div>
+      <div class="skillmatch">${chips}</div>
+      ${full?'':`<div style="font-size:11px;color:var(--sub);margin-top:6px;line-height:1.6">✗ 的技能可在备赛期补足，或寻找掌握该技能的队友组队互补。</div>`}
+    </div>`;
+  } else {
+    skillHtml = `<div class="kv"><div class="k">技能 需求对照</div><div class="v" style="color:var(--sub)">无特定技能门槛，重在备赛期的针对性练习（如力学/金相/实验类赛事）。</div></div>`;
+  }
   document.getElementById('pBody').innerHTML = `
     <div class="scoreBox">
       <div class="scoreNum" style="background:radial-gradient(circle at 50% 40%, ${g.c}26, transparent 70%);border:2px solid ${g.c}">
@@ -955,6 +976,7 @@ function openPanel(it){
       </div>
     </div>
     ${dimsHtml}
+    ${skillHtml}
     <div class="kv"><div class="k">报名 时间</div><div class="v">${windowText(it)}</div></div>
     <div class="kv"><div class="k">比赛 时间</div><div class="v">${it.when}</div></div>
     ${it.intro?`<div class="kv"><div class="k">赛事 简介（依据官网通知整理）</div><div class="v" style="font-size:12.5px;color:#c9d4f5;line-height:1.85">${it.intro}</div></div>`:''}
