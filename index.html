@@ -2739,33 +2739,105 @@ glow.scale.set(26,26,1); scene.add(glow);
   scene.add(new THREE.Points(g, new THREE.PointsMaterial({color:0x9db4ff,size:.55,transparent:true,opacity:.7})));
 })();
 
-/* ---- 分数环带 + 标签 ---- */
+/* ---- 分数环带（粒子化，无线条） + 标签 ---- */
 const ringDefs = [
-  {s:85,label:'≥85 强烈推荐'},{s:75,label:'75–84 推荐'},{s:60,label:'60–74 可选'},{s:40,label:'<60 低匹配'}
+  {s:85,label:'≥85 强烈推荐',c:new THREE.Color(0xffe08a)},
+  {s:75,label:'75–84 推荐',c:new THREE.Color(0x7ec8ff)},
+  {s:60,label:'60–74 可选',c:new THREE.Color(0x9fe8b0)},
+  {s:40,label:'<60 低匹配',c:new THREE.Color(0x6b7694)},
 ];
-const scoreR = s => 20 + (100-s)/(100-30)*42;   // score→半径
-ringDefs.forEach((rd,i)=>{
-  const r = scoreR(rd.s);
-  const ring = new THREE.Mesh(new THREE.RingGeometry(r-.25,r+.25,140),
-    new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:.10,side:THREE.DoubleSide}));
-  ring.rotation.x = -Math.PI/2; scene.add(ring);
+const scoreR = s => 20 + Math.pow((100-s)/(100-30), 0.92)*46;   // score→半径（非线性，低分段更散开）
+(function buildDustRings(){
+  // 粒子环带：替代线条，每条环带沿圆周撒稀疏光尘
+  const per = 260, total = per * ringDefs.length;
+  const pos = new Float32Array(total*3), col = new Float32Array(total*3);
+  let idx = 0;
+  ringDefs.forEach(rd=>{
+    const r = scoreR(rd.s);
+    for (let i = 0; i < per; i++){
+      const a = Math.random()*Math.PI*2;
+      const rr = r + (Math.random()-0.5)*2.4;
+      pos[idx*3] = Math.cos(a)*rr;
+      pos[idx*3+1] = (Math.random()-0.5)*1.6;
+      pos[idx*3+2] = Math.sin(a)*rr;
+      const c = rd.c.clone().multiplyScalar(0.55 + Math.random()*0.45);
+      col[idx*3] = c.r; col[idx*3+1] = c.g; col[idx*3+2] = c.b;
+      idx++;
+    }
+  });
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(pos,3));
+  g.setAttribute('color', new THREE.BufferAttribute(col,3));
+  window.__dustRing = new THREE.Points(g, new THREE.PointsMaterial({
+    size:.5, vertexColors:true, transparent:true, opacity:.75,
+    blending:THREE.AdditiveBlending, depthWrite:false}));
+  scene.add(window.__dustRing);
   // 标签 sprite
-  const c=document.createElement('canvas'); c.width=512; c.height=96;
-  const x=c.getContext('2d'); x.font='bold 40px Microsoft YaHei'; x.fillStyle='rgba(220,230,255,.85)';
-  x.textAlign='center'; x.fillText(rd.label,256,58);
-  const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(c),transparent:true,depthWrite:false}));
-  sp.scale.set(16,3,1);
-  const a = i*1.05 + .35;
-  sp.position.set(Math.cos(a)*(r+3.2), .4, Math.sin(a)*(r+3.2));
-  scene.add(sp);
-});
-// 扇区分隔线
-for(let i=0;i<6;i++){
-  const a=i*Math.PI/3 + Math.PI/6;
-  const g=new THREE.BufferGeometry().setFromPoints([
-    new THREE.Vector3(Math.cos(a)*8,0,Math.sin(a)*8),
-    new THREE.Vector3(Math.cos(a)*66,0,Math.sin(a)*66)]);
-  scene.add(new THREE.Line(g,new THREE.LineBasicMaterial({color:0x44507a,transparent:true,opacity:.5})));
+  ringDefs.forEach((rd,i)=>{
+    const r = scoreR(rd.s);
+    const c=document.createElement('canvas'); c.width=512; c.height=96;
+    const x=c.getContext('2d'); x.font='bold 40px Microsoft YaHei'; x.fillStyle='rgba(220,230,255,.8)';
+    x.textAlign='center'; x.fillText(rd.label,256,58);
+    const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(c),transparent:true,depthWrite:false,opacity:.85}));
+    sp.scale.set(16,3,1);
+    const a = i*1.05 + .35;
+    sp.position.set(Math.cos(a)*(r+3.6), .4, Math.sin(a)*(r+3.6));
+    scene.add(sp);
+  });
+})();
+/* 环带尘埃缓慢绕轴旋转 */
+function animateDust(t){
+  if (window.__dustRing) window.__dustRing.rotation.y = t*0.00004;
+}
+
+/* 三层氛围粒子：星环尘埃盘 / 上升微粒 / 高分卡片闪烁 */
+(function ambientParticles(){
+  // ① 星环尘埃盘（半径 16-72，贴星系平面，随环带缓转）
+  const n1 = 2600, p1 = new Float32Array(n1*3), c1 = new Float32Array(n1*3);
+  const tint = [new THREE.Color(0x6ea8ff), new THREE.Color(0x9b7bff), new THREE.Color(0x58c8d8)];
+  for (let i = 0; i < n1; i++){
+    const a = Math.random()*Math.PI*2, r = 16 + Math.pow(Math.random(),0.7)*56;
+    p1[i*3] = Math.cos(a)*r; p1[i*3+1] = (Math.random()-0.5)*2.2; p1[i*3+2] = Math.sin(a)*r;
+    const c = tint[i%3].clone().multiplyScalar(0.35 + Math.random()*0.5);
+    c1[i*3] = c.r; c1[i*3+1] = c.g; c1[i*3+2] = c.b;
+  }
+  const g1 = new THREE.BufferGeometry();
+  g1.setAttribute('position', new THREE.BufferAttribute(p1,3));
+  g1.setAttribute('color', new THREE.BufferAttribute(c1,3));
+  window.__dustDisk = new THREE.Points(g1, new THREE.PointsMaterial({
+    size:.38, vertexColors:true, transparent:true, opacity:.55,
+    blending:THREE.AdditiveBlending, depthWrite:false}));
+  scene.add(window.__dustDisk);
+  // ② 上升微粒（缓慢上浮，到顶回底）
+  const n2 = 240, p2 = new Float32Array(n2*3);
+  window.__riseData = [];
+  for (let i = 0; i < n2; i++){
+    const a = Math.random()*Math.PI*2, r = 12 + Math.random()*58;
+    const y = Math.random()*16 - 2;
+    p2[i*3] = Math.cos(a)*r; p2[i*3+1] = y; p2[i*3+2] = Math.sin(a)*r;
+    window.__riseData.push({ v: 0.004 + Math.random()*0.012, x: p2[i*3], z: p2[i*3+2] });
+  }
+  const g2 = new THREE.BufferGeometry();
+  g2.setAttribute('position', new THREE.BufferAttribute(p2,3));
+  window.__rise = new THREE.Points(g2, new THREE.PointsMaterial({
+    size:.3, color:0xaecbff, transparent:true, opacity:.45,
+    blending:THREE.AdditiveBlending, depthWrite:false}));
+  scene.add(window.__rise);
+  // ③ 高分卡片闪烁粒子 → 移至 layoutCards()（跟随画像重算更新）
+})();
+function animateAmbient(t){
+  if (window.__dustDisk) window.__dustDisk.rotation.y = t*0.00005;
+  if (window.__rise){
+    const pos = window.__rise.geometry.attributes.position;
+    for (let i = 0; i < window.__riseData.length; i++){
+      const d = window.__riseData[i];
+      let y = pos.getY(i) + d.v; if (y > 15) y = -2;
+      pos.setY(i, y);
+    }
+    pos.needsUpdate = true;
+    window.__rise.material.opacity = 0.32 + Math.sin(t*0.0012)*0.16;
+  }
+  if (window.__sparkle) window.__sparkle.material.opacity = 0.55 + Math.sin(t*0.002)*0.35;
 }
 // 地面
 const ground = new THREE.Mesh(new THREE.CircleGeometry(70,72),
@@ -2825,6 +2897,31 @@ function wrapText(x,text,px,py,maxW,lh,maxLines){
   lines.slice(0,maxLines).forEach((l,i)=>x.fillText(l,px,py+i*lh));
 }
 
+function buildSparkles(){
+  /* 高分卡片闪烁粒子（85+ 金色，75+ 蓝色；跟随画像重算更新） */
+  if (window.__sparkle){ scene.remove(window.__sparkle); window.__sparkle.geometry.dispose(); window.__sparkle = null; }
+  const bright = items.filter(i => i.mesh && i.score >= 75);
+  if (!bright.length) return;
+  const n3 = bright.length * 5;
+  const p3 = new Float32Array(n3*3), c3 = new Float32Array(n3*3);
+  let k = 0;
+  bright.forEach(it => {
+    const col = it.score >= 85 ? new THREE.Color(0xffd98a) : new THREE.Color(0x8ac6ff);
+    const p = it.mesh.position;
+    for (let j = 0; j < 5; j++){
+      const a = Math.random()*Math.PI*2, rr = 2.2 + Math.random()*2.4;
+      p3[k*3] = p.x + Math.cos(a)*rr; p3[k*3+1] = p.y + (Math.random()-0.5)*2.6; p3[k*3+2] = p.z + Math.sin(a)*rr;
+      c3[k*3] = col.r; c3[k*3+1] = col.g; c3[k*3+2] = col.b; k++;
+    }
+  });
+  const g3 = new THREE.BufferGeometry();
+  g3.setAttribute('position', new THREE.BufferAttribute(p3,3));
+  g3.setAttribute('color', new THREE.BufferAttribute(c3,3));
+  window.__sparkle = new THREE.Points(g3, new THREE.PointsMaterial({
+    size:.55, vertexColors:true, transparent:true, opacity:.9,
+    blending:THREE.AdditiveBlending, depthWrite:false}));
+  scene.add(window.__sparkle);
+}
 function layoutCards(){
   /* 清理旧卡片（画像重算后纹理与位置全部重建） */
   window.__bootMsg && window.__bootMsg('正在生成竞赛卡片…');
@@ -2842,28 +2939,49 @@ function layoutCards(){
   CATS.forEach((cat,ci)=>{
     const list = bySector[cat.id]; if(!list.length) return;
     const a0 = ci*Math.PI/3 + Math.PI/6;
-    const twoRing = list.length > 9;                 // 密集扇区分内外双圈
+    const twoRing = list.length > 8;                 // 密集扇区分内外双圈（更早分圈，单圈更疏朗）
     const half = Math.ceil(list.length/2);
-    const shrink = list.length > 12 ? 0.82 : 1;      // 特别密集时缩小卡片
+    const shrink = list.length > 11 ? 0.80 : 1;      // 特别密集时略缩卡片
     list.forEach((it,idx)=>{
       let ringK = 1, i2 = idx, n2 = list.length, yOff = 0;
       if(twoRing){
-        if(idx < half){ ringK = .86; i2 = idx; n2 = half; yOff = -1.15; }
-        else          { ringK = 1.10; i2 = idx - half; n2 = list.length - half; yOff = 1.15; }
+        if(idx < half){ ringK = .84; i2 = idx; n2 = half; yOff = -1.4; }
+        else          { ringK = 1.12; i2 = idx - half; n2 = list.length - half; yOff = 1.4; }
       }
-      const a = a0 + .10 + (i2+.5)/n2 * (Math.PI/3 - .20);
+      const a = a0 + .08 + (i2+.5)/n2 * (Math.PI/3 - .16);
       const r = scoreR(it.score) * ringK;
       const y = (it.score-55)/45*7 + 2.2 + yOff;
       const w = 7.6*shrink;
       const mat = new THREE.MeshBasicMaterial({map:makeCard(it),transparent:true,side:THREE.DoubleSide,opacity:1});
+      mat.color.setScalar(0.72 + (it.score/100)*0.48);   // 推荐分越高卡片越亮
       const m = new THREE.Mesh(new THREE.PlaneGeometry(w, w*4.52/7.6), mat);
       m.position.set(Math.cos(a)*r, y, Math.sin(a)*r);
       m.lookAt(m.position.x*2, y, m.position.z*2);   // 正面朝外
       m.userData.item = it;
       it.mesh = m; it.baseY = y; it.baseA = a; it.baseR = r;
       scene.add(m);
+      /* 高分卡片光晕（85+ 金色光晕、75+ 蓝色微光） */
+      if (it.score >= 75){
+        const col = it.score >= 85 ? 0xffd98a : 0x8ac6ff;
+        const glowTex = (col === 0xffd98a ? window.__glowGold : window.__glowBlue) ||
+          (col === 0xffd98a ? (window.__glowGold = makeGlowTex('#ffd98a')) : (window.__glowBlue = makeGlowTex('#8ac6ff')));
+        const glow = new THREE.Sprite(new THREE.SpriteMaterial({
+          map: glowTex, transparent:true, opacity: it.score >= 85 ? .34 : .20,
+          blending:THREE.AdditiveBlending, depthWrite:false}));
+        glow.scale.set(w*1.7, w*1.7, 1);
+        m.add(glow);
+      }
     });
   });
+  buildSparkles();
+}
+function makeGlowTex(color){
+  const c = document.createElement('canvas'); c.width = c.height = 128;
+  const x = c.getContext('2d');
+  const g = x.createRadialGradient(64,64,0,64,64,64);
+  g.addColorStop(0, color); g.addColorStop(1, 'rgba(0,0,0,0)');
+  x.fillStyle = g; x.fillRect(0,0,128,128);
+  return new THREE.CanvasTexture(c);
 }
 layoutCards();
 window.__rebuildGalaxy = function(){ try { layoutCards(); } catch(e){} };
@@ -2963,6 +3081,8 @@ function tick(t){
     if(k>=1) camAnim=null;
   }
   animCards(t);
+  animateDust(t);
+  animateAmbient(t);
   controls.update();
   renderer.render(scene, camera);
 }
