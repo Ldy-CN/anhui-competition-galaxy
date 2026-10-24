@@ -1572,6 +1572,15 @@ const MAJORS = {
   }},
   other: { label:'其他/还没想好', subs:null, row:[21,19,21,24,21,19] },
 };
+/* 只选大类不选细分时：兜底权重 = 该大类全部细分专业权重的平均值（保证大类选择即有真实推荐；新增细分自动跟随） */
+Object.keys(MAJORS).forEach(g => {
+  const grp = MAJORS[g];
+  if (grp.row || !grp.subs) return;
+  const names = Object.keys(grp.subs);
+  if (!names.length) return;
+  grp.row = [0,1,2,3,4,5].map(i =>
+    Math.round(names.reduce((s,nm)=>s+grp.subs[nm][i],0) / names.length));
+});
 function majorRowOf(pf){
   const grp = MAJORS[pf.major] || MAJORS.other;
   if (grp.subs && pf.sub && grp.subs[pf.sub]) {
