@@ -1910,6 +1910,7 @@ stage.appendChild(renderer.domElement);
       const dist = dir.length();
       if (dist >= 12 && dist <= 240) { camera.position.copy(controls.target.clone().add(dir)); controls.update(); }
     }
+    lastNavAt = performance.now(); navDelay = 600;
   }, { passive: false });
 })();
 
@@ -2200,7 +2201,7 @@ function makeCard(item){
   const x=c.getContext('2d'); x.scale(sc,sc);
   const col = catColor(item.cat);
   // 底
-  x.fillStyle='rgba(10,15,32,.96)';
+  x.fillStyle='rgba(19,27,54,.97)';
   roundRect(x,2,2,W-4,H-4,20); x.fill();
   x.strokeStyle=col; x.lineWidth=3; roundRect(x,2,2,W-4,H-4,20); x.stroke();
   // 顶部类别条
@@ -2308,10 +2309,13 @@ function layoutCards(){
       const rr = r*Math.cos(lat);
       const w = 7.6*shrink;
       const mat = new THREE.MeshBasicMaterial({map:makeCard(it),transparent:true,side:THREE.DoubleSide,opacity:1});
-      mat.color.setScalar(0.72 + (it.score/100)*0.48);   // 推荐分越高卡片越亮
+      mat.color.setScalar(0.82 + (it.score/100)*0.5);   // 推荐分越高卡片越亮（提亮，压过粒子抢占）
       const m = new THREE.Mesh(new THREE.PlaneGeometry(w, w*4.52/7.6), mat);
       m.position.set(Math.cos(lonA)*rr, y, Math.sin(lonA)*rr);
       m.lookAt(m.position.x*2, m.position.y*2, m.position.z*2);   // 球面径向朝外
+      m.renderOrder = 10;                                // 卡片最后绘制，叠于粒子之上更醒目
+      it.baseScale = 0.78 + (it.score/100)*0.44;         // 近大远小：高分卡更大，强化距离感
+      m.scale.setScalar(it.baseScale);
       m.userData.item = it;
       it.baseY = y; it.baseA = lonA; it.baseR = r;
       it.mesh = m;
@@ -2364,8 +2368,9 @@ renderer.domElement.addEventListener('pointermove', e=>{
     tip.innerHTML=`${m.userData.item.name}<b style="color:${grade(m.userData.item.score).c}">${m.userData.item.score}分</b>`;
   } else tip.style.display='none';
 });
-let downPos=null, pauseUntil=0;
-renderer.domElement.addEventListener('pointerdown', e=>{ downPos=[e.clientX,e.clientY]; controls.autoRotate=false; });
+let downPos=null, pauseUntil=0, lastNavAt=0, navDelay=600, recenterFast=false;
+const ORIGIN = new THREE.Vector3();
+renderer.domElement.addEventListener('pointerdown', e=>{ downPos=[e.clientX,e.clientY]; controls.autoRotate=false; recenterFast=true; });
 renderer.domElement.addEventListener('pointerup', e=>{
   pauseUntil = performance.now()+9000;
   if(!downPos) return;
@@ -2408,7 +2413,8 @@ function animCards(t){
     const focus = (it===hovered || it===window.__selectedItem);
     const target = focus ? 1 : Math.min(it._targetOpacity, depthOp);
     m.material.opacity += (target - m.material.opacity)*.12;
-    const ts = (it===hovered||it===selected) ? (it._targetOpacity>.5?1.14:it._targetScale) : it._targetScale;
+    const b = it.baseScale || 1;                   // 基准尺寸（分数越高越大）
+    const ts = (it===hovered||it===selected) ? b*(it._targetOpacity>.5?1.14:it._targetScale) : b*it._targetScale;
     m.scale.x += (ts-m.scale.x)*.15;
     m.scale.y = m.scale.x; m.scale.z = 1;
     m.position.y = it.baseY + Math.sin(t*.001 + it.baseA*3)*.5;
@@ -2427,7 +2433,15 @@ function tick(t){
     const k = Math.min(1,(t-camAnim.t0)/camAnim.dur), e = 1-Math.pow(1-k,3);
     camera.position.lerpVectors(camAnim.p0, camAnim.p1, e);
     controls.target.lerpVectors(camAnim.l0, camAnim.l1, e);
-    if(k>=1) camAnim=null;
+    if(k>=1){ camAnim=null; lastNavAt = performance.now(); navDelay = 2500; }
+  }
+  /* 旋转中心回归星核：缩放/飞行会临时移动 target（焦点保持所需）。
+     拖拽开始时快速归位（拖动永远绕可见星核）；缩放后 0.6s / 飞行后 2.5s 缓动归位 */
+  if(recenterFast && !camAnim){
+    if(controls.target.lengthSq()>0.001) controls.target.lerp(ORIGIN, 0.3);
+    else { controls.target.set(0,0,0); recenterFast=false; }
+  } else if(!downPos && !camAnim && performance.now()-lastNavAt>navDelay && controls.target.lengthSq()>0.04){
+    controls.target.lerp(ORIGIN, 0.09);
   }
   animCards(t);
   animateDust(t);
