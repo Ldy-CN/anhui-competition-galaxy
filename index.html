@@ -2234,7 +2234,12 @@ function animateDust(t){
   if (typeof coreIn  !== 'undefined' && coreIn)  coreIn.material.opacity  = 0.36 + Math.sin(t*0.0013)*0.08;
   if (typeof coreMid !== 'undefined' && coreMid) coreMid.material.opacity = 0.26 + Math.sin(t*0.0009 + 1.2)*0.07;
   if (typeof coreOut !== 'undefined' && coreOut) coreOut.material.opacity = 0.16 + Math.sin(t*0.0006 + 2.4)*0.05;
-  if (typeof badgeSprite !== 'undefined' && badgeSprite) badgeSprite.material.opacity = 0.72 + Math.sin(t*0.0011)*0.065;
+  /* 皖字距离自适应：全景（远）时为星系地标正常显示；贴近看卡片（近）时淡出退位，不抢卡片视觉 */
+  if (typeof badgeSprite !== 'undefined' && badgeSprite){
+    const camD = (window.__cam && window.__controls) ? window.__cam.position.distanceTo(window.__controls.target) : 110;
+    const vis = camD >= 140 ? 1 : (camD <= 85 ? 0 : (camD - 85) / 55);   // 85~140 之间渐显
+    badgeSprite.material.opacity = (0.62 + Math.sin(t*0.0011)*0.06) * vis;
+  }
   if (typeof stars !== 'undefined' && stars)     stars.material.opacity   = 0.72 + Math.sin(t*0.0005)*0.1;
 }
 
@@ -2445,10 +2450,8 @@ function setPtr(e){
 function pick(){
   ray.setFromCamera(ptr, camera);
   const hits = ray.intersectObjects(items.filter(i=>i.visible!==false).map(i=>i.mesh));
-  /* 点击穿透：跳过因深度透视而变淡的卡片，命中其后面清晰可见的卡片 */
-  for(const h of hits){
-    if(h.object.material.opacity >= 0.5) return h.object;
-  }
+  /* 所见即所得：命中射线上的第一张卡片（无论透视深浅）。
+     悬停机制会让它变实，不存在误点；旧的"穿透淡卡"逻辑会把点击跳到球心对面的卡片，已移除 */
   return hits.length ? hits[0].object : null;
 }
 renderer.domElement.addEventListener('pointermove', e=>{
