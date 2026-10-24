@@ -392,7 +392,7 @@
 
 <div id="hint">拖拽旋转 · 滚轮指哪缩哪（SolidWorks 式焦点缩放） · 近处卡片自动变淡 · 点击卡片查看详情</div>
 
-<div id="aiBar">⚠ 本站全部内容由 AI 依据各赛事官网公开通知整理生成，仅供参考 · 报名信息请以官网最新通知为准 · <span id="aiMore">查看完整声明</span> · <span id="fbOpen">💬 反馈纠错</span><span id="visitStat" style="display:none"> · 👥 本站已接待 <b id="busuanzi_value_site_uv" style="color:#7ee0a8">…</b> 位访客<span id="pvPart"> · 累计 <b id="busuanzi_value_site_pv" style="color:#7ee0a8">…</b> 次访问</span>（同访客不重复计数）</span></div>
+<div id="aiBar">⚠ 本站全部内容由 AI 依据各赛事官网公开通知整理生成，仅供参考 · 报名信息请以官网最新通知为准 · <span id="aiMore">查看完整声明</span> · <span id="fbOpen">💬 反馈纠错</span><span id="visitStat" style="display:none"> · 👁 本站累计访问 <b id="busuanzi_value_site_pv" style="color:#7ee0a8">…</b> 次</span></div>
 
 <div id="fbModal">
   <div class="aim">
@@ -1852,45 +1852,32 @@ fetch('monitor/monitor-state.json').then(r => r.ok ? r.json() : null).then(st =>
   document.getElementById('aiBar').appendChild(span);
 }).catch(()=>{});
 
-/* ---- 访问统计展示（双服务兜底）----
-   路A 不蒜子：UV(按访客去重)+PV；路B Abacus：浏览器级去重（首次访问 hit+1，重复访问 get 只读不加）。
-   任一路先到先显示；35s 两路皆空（离线等）才移除。 */
+/* ---- 访问统计展示（双服务兜底，每次访问都计数）----
+   路A 不蒜子 site_pv（每次访问 +1）；路B Abacus hit（每次访问 +1）。任一路先到先显示。 */
 (function visitStat(){
   const box = document.getElementById('visitStat');
   if (!box) return;
-  const uvEl = document.getElementById('busuanzi_value_site_uv');
   const pvEl = document.getElementById('busuanzi_value_site_pv');
-  const pvPart = document.getElementById('pvPart');
   let shown = false;
-  function show(uv, pv){
-    if (shown || !(uv > 0)) return;
+  function show(n){
+    if (shown || !(n > 0)) return;
     shown = true;
-    uvEl.textContent = uv;
-    if (pv > 0) pvEl.textContent = pv;
-    else pvPart.style.display = 'none';      // 备路只有去重访客数，隐藏 PV 段
+    pvEl.textContent = n;
     box.style.display = 'inline';
   }
-  /* 路 A：不蒜子（async 脚本自动填充 busuanzi_value_* 元素），轮询 30s */
+  /* 路 A：不蒜子（async 脚本自动填充 busuanzi_value_site_pv），轮询 30s */
   let tries = 0;
   const timer = setInterval(() => {
     tries++;
-    const uv = parseInt(uvEl.textContent, 10);
-    if (uv > 0){ clearInterval(timer); show(uv, parseInt(pvEl.textContent, 10)); }
+    const n = parseInt(pvEl.textContent, 10);
+    if (n > 0){ clearInterval(timer); show(n); }
     else if (tries > 60) clearInterval(timer);
   }, 500);
-  /* 路 B：Abacus（浏览器级去重：同访客重复访问不 +1） */
-  try {
-    const first = !localStorage.getItem('gxy_visited');
-    fetch('https://abacus.jasoncameron.dev/' + (first ? 'hit/' : 'get/') + 'anhui-galaxy/visitors')
-      .then(r => r.ok ? r.json() : null)
-      .then(d => {
-        if (d && d.value != null){
-          try { localStorage.setItem('gxy_visited','1'); } catch(e){}
-          show(d.value, null);
-        }
-      }).catch(()=>{});
-  } catch(e){}
-  /* 总兜底：35s 两路皆空 → 静默移除 */
+  /* 路 B：Abacus——每次打开 +1 */
+  fetch('https://abacus.jasoncameron.dev/hit/anhui-galaxy/visitors')
+    .then(r => r.ok ? r.json() : null)
+    .then(d => { if (d && d.value != null) show(d.value); }).catch(()=>{});
+  /* 总兜底：35s 两路皆空（离线等）→ 静默移除 */
   setTimeout(() => { if (!shown) box.remove(); }, 35000);
 })();
 
