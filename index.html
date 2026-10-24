@@ -1978,10 +1978,10 @@ const DOT_TEX = (()=>{   // 柔和圆点：中心亮、快速衰减、外缘全�
   return new THREE.CanvasTexture(c);
 })();
 
-/* ---- 中心星核（三层光晕 + 核心星团，呼吸脉动） ---- */
+/* ---- 中心星核（三层光晕 + 核心星团，呼吸脉动）——亮度收敛，皖字徽章为视觉主体 ---- */
 const coreKernel = new THREE.Mesh(
-  new THREE.SphereGeometry(0.85, 32, 32),
-  new THREE.MeshBasicMaterial({color:0xf2f6ff})
+  new THREE.SphereGeometry(0.6, 32, 32),
+  new THREE.MeshBasicMaterial({color:0x7d92b8})
 );
 scene.add(coreKernel);
 function coreLayer(color, scale, opacity){
@@ -1990,9 +1990,38 @@ function coreLayer(color, scale, opacity){
     blending:THREE.AdditiveBlending, depthWrite:false}));
   sp.scale.set(scale, scale, 1); scene.add(sp); return sp;
 }
-const coreIn  = coreLayer('rgba(235,242,255,.95)', 7,  .9);   // 内核：暖白小亮斑
-const coreMid = coreLayer('rgba(122,150,255,.55)', 22, .55);  // 中晕：蓝紫
-const coreOut = coreLayer('rgba(88,200,216,.30)',  46, .30);  // 外晕：青紫大范围
+const coreIn  = coreLayer('rgba(235,242,255,.95)', 6,  .42);  // 内核：暖白柔光（已收敛）
+const coreMid = coreLayer('rgba(122,150,255,.55)', 20, .32);  // 中晕：蓝紫
+const coreOut = coreLayer('rgba(88,200,216,.30)',  42, .20);  // 外晕：青紫大范围
+
+/* ---- 「皖」字徽章：星系中心，Sprite 天生 billboard——不管怎么旋转始终正对用户 ----
+   未来扩展其他省时：换 CENTER_BADGE.char / .glow 两处即可（届时星系结构另行设计） */
+const CENTER_BADGE = { char:'皖', glow:'rgba(255,214,130,.85)' };
+const badgeSprite = (()=>{
+  const c = document.createElement('canvas'); c.width = c.height = 256;
+  const x = c.getContext('2d');
+  x.textAlign = 'center'; x.textBaseline = 'middle';
+  // 柔和发光底
+  x.shadowColor = CENTER_BADGE.glow; x.shadowBlur = 26;
+  // 金色渐变字身
+  const g = x.createLinearGradient(0, 46, 0, 214);
+  g.addColorStop(0, '#fff8e2'); g.addColorStop(.55, '#ffd98a'); g.addColorStop(1, '#d9a54e');
+  x.fillStyle = g;
+  x.font = 'bold 168px "Microsoft YaHei", "KaiTi", serif';
+  x.fillText(CENTER_BADGE.char, 128, 136);
+  x.fillText(CENTER_BADGE.char, 128, 136);   // 二次绘制增强发光
+  x.shadowBlur = 0;
+  x.strokeStyle = 'rgba(255,244,214,.95)'; x.lineWidth = 3.5;
+  x.strokeText(CENTER_BADGE.char, 128, 136);
+  const tex = new THREE.CanvasTexture(c);
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({
+    map: tex, transparent:true, opacity:.96,
+    depthTest:false, depthWrite:false,       // 永远可见（徽章性质）
+    blending:THREE.NormalBlending}));        // 普通混合，避免叠加光晕过亮
+  sp.scale.set(7.5, 7.5, 1);
+  sp.renderOrder = 20;
+  scene.add(sp); return sp;
+})();
 /* 核心星团：围绕核心的小粒子群（扁球分布，暖白+淡金，缓慢旋转） */
 const coreSwarm = (()=>{
   const n = 520, pos = new Float32Array(n*3), col = new Float32Array(n*3);
@@ -2170,9 +2199,10 @@ function animateDust(t){
     coreSwarm.rotation.y = t*0.00025;
     coreSwarm.material.opacity = 0.72 + Math.sin(t*0.0016)*0.2;
   }
-  if (typeof coreIn  !== 'undefined' && coreIn)  coreIn.material.opacity  = 0.78 + Math.sin(t*0.0013)*0.16;
-  if (typeof coreMid !== 'undefined' && coreMid) coreMid.material.opacity = 0.45 + Math.sin(t*0.0009 + 1.2)*0.14;
-  if (typeof coreOut !== 'undefined' && coreOut) coreOut.material.opacity = 0.24 + Math.sin(t*0.0006 + 2.4)*0.08;
+  if (typeof coreIn  !== 'undefined' && coreIn)  coreIn.material.opacity  = 0.36 + Math.sin(t*0.0013)*0.08;
+  if (typeof coreMid !== 'undefined' && coreMid) coreMid.material.opacity = 0.26 + Math.sin(t*0.0009 + 1.2)*0.07;
+  if (typeof coreOut !== 'undefined' && coreOut) coreOut.material.opacity = 0.16 + Math.sin(t*0.0006 + 2.4)*0.05;
+  if (typeof badgeSprite !== 'undefined' && badgeSprite) badgeSprite.material.opacity = 0.9 + Math.sin(t*0.0011)*0.08;
   if (typeof stars !== 'undefined' && stars)     stars.material.opacity   = 0.72 + Math.sin(t*0.0005)*0.1;
 }
 
