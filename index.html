@@ -264,6 +264,14 @@
     if (!ok) showErr('初始化超时。可能是浏览器内核较旧。<br>建议：更新夸克/Edge 至最新版，或用最新版 Chrome 打开。');
   }, 12000);
 
+  /* 访客计数兜底：12s 内未填充则保持隐藏（不蒜子服务不可达时不显示空值） */
+  setTimeout(function(){
+    try {
+      var v = document.getElementById('busuanzi_value_site_uv');
+      var c = document.getElementById('busuanzi_container_site_uv');
+      if (c && v && (!v.textContent || v.textContent === '…')) c.style.display = 'none';
+    } catch(e){}
+  }, 12000);
   /* 多源加载器（在线版）：CDN 优先 → Pages 本地回退；THREE → OrbitControls → mainRun */
   window.loadClassic = function(){
     var gl = false;
@@ -316,6 +324,7 @@
   };
 })();
 </script>
+<script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
 <link rel="preconnect" href="https://registry.npmmirror.com" crossorigin>
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="preload" as="script" href="three.min.js">
@@ -345,6 +354,7 @@
     覆盖：省教育厅官方目录 + 全国榜单赛事 + 大创与省内特色赛（仅收录省级 B 类及以上），共 <b id="tcTotal"></b> 项｜
     推荐分按<b>你的画像</b>实时计算：专业匹配 35 + 技能储备 25 + 年级适配 10 + 可达性 15 + 兴趣方向 10 + 目的加成 5 + 赛道契合 6
     ｜<button id="pfOpen">⚙ 填写我的画像，获取专属推荐</button>
+    <span id="busuanzi_container_site_uv" style="display:none" title="按访客去重计数（同一人反复访问不重复）">｜🚀 已陪伴 <b id="busuanzi_value_site_uv">…</b> 位同学选赛</span>
   </div>
 </div>
 
@@ -404,6 +414,7 @@
       <p><b>3. 以官网为准：</b>竞赛的报名时间、赛制、赛道设置、奖项规则等信息<b>以各赛事官方网站发布的最新通知为准</b>；本页信息可能滞后于官网更新，或存在整理疏漏。</p>
       <p><b>4. 报名前请核实：</b>报名前务必前往对应官网（详情页已提供链接或渠道说明）核对原始通知，并向本校教务处 / 学院确认报名渠道与综测认定政策。</p>
       <p><b>6. 收录门槛：</b>本页仅收录<b>省级 B 类（含）以上或全国性（国家级）赛事</b>；过于小众的赛事与校内选拔赛不收录。</p>
+      <p><b>7. 访问统计：</b>页顶「已陪伴 N 位同学选赛」由第三方免费计数服务（不蒜子）按访客去重统计（同一访客反复访问不重复计），本站不收集、不存储任何个人信息。</p>
   <p><b>5. 非官方声明：</b>本页面为非官方的个人学习参考工具，与安徽省教育厅及各赛事主办方无任何隶属或合作关系。</p>
     </div>
     <button id="aiClose">我知道了</button>
