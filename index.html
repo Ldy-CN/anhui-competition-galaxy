@@ -2454,10 +2454,8 @@ function pick(){
 renderer.domElement.addEventListener('pointermove', e=>{
   setPtr(e);
   const m = pick();
-  if(hovered && hovered!==m){ hovered.scale.setScalar(1); }
-  hovered = m;
+  hovered = m;      // 只改引用：缩放统一由 animCards 每帧平滑插值（避免硬切换与插值拉扯导致抽搐）
   if(m){
-    m.scale.setScalar(1.14);
     tip.style.display='block';
     tip.style.left=(e.clientX+16)+'px'; tip.style.top=(e.clientY+14)+'px';
     tip.innerHTML=`${m.userData.item.name}<b style="color:${grade(m.userData.item.score).c}">${m.userData.item.score}分</b>`;
@@ -2512,7 +2510,8 @@ function animCards(t){
     const ts = (it===hovered||it===selected) ? b*(it._targetOpacity>.5?1.14:it._targetScale) : b*it._targetScale;
     m.scale.x += (ts-m.scale.x)*.15;
     m.scale.y = m.scale.x; m.scale.z = 1;
-    m.position.y = it.baseY + Math.sin(t*.001 + it.baseA*3)*.5;
+    const amp = focus ? .12 : .35;   // 悬停/选中时浮动减弱，稳定指针命中（防抽搐）
+    m.position.y = it.baseY + Math.sin(t*.001 + it.baseA*3)*amp;
   });
 }
 
