@@ -2035,7 +2035,7 @@ const galaxyBand = (()=>{
   g.setAttribute('position', new THREE.BufferAttribute(pos,3));
   g.setAttribute('color', new THREE.BufferAttribute(cols,3));
   const p = new THREE.Points(g, new THREE.PointsMaterial({
-    size:2.2, map:DOT_TEX, vertexColors:true, transparent:true, opacity:.55,
+    size:2.6, map:DOT_TEX, vertexColors:true, transparent:true, opacity:.5,
     sizeAttenuation:false,            // 屏幕恒定大小：缩到最远银河带依然清晰
     blending:THREE.AdditiveBlending, depthWrite:false}));
   scene.add(p); return p;
@@ -2043,7 +2043,7 @@ const galaxyBand = (()=>{
 
 /* ---- 屏幕星尘层：恒定像素大小（不随距离衰减），保证任何缩放级别下漫天星尘感 ---- */
 const screenDust = (()=>{
-  const n=1300, pos=new Float32Array(n*3), cols=new Float32Array(n*3);
+  const n=2000, pos=new Float32Array(n*3), cols=new Float32Array(n*3);
   const tint=[new THREE.Color(0x9db8ff), new THREE.Color(0xd8e4ff), new THREE.Color(0xc4b0ff), new THREE.Color(0xffe0b8)];
   for(let i=0;i<n;i++){
     const r=30+Math.random()*190, t=Math.random()*Math.PI*2, p=Math.acos(2*Math.random()-1);
@@ -2055,8 +2055,8 @@ const screenDust = (()=>{
   g.setAttribute('position', new THREE.BufferAttribute(pos,3));
   g.setAttribute('color', new THREE.BufferAttribute(cols,3));
   const p = new THREE.Points(g, new THREE.PointsMaterial({
-    size:1.6, map:DOT_TEX, vertexColors:true, transparent:true, opacity:.5,
-    sizeAttenuation:false,            // 屏幕恒定 1.6px：缩小后依然漫天星尘
+    size:2.2, map:DOT_TEX, vertexColors:true, transparent:true, opacity:.5,
+    sizeAttenuation:false,            // 屏幕恒定 2.2px 起步：缩小后随缩放感知再增强
     blending:THREE.AdditiveBlending, depthWrite:false}));
   scene.add(p); return p;
 })();
@@ -2119,11 +2119,18 @@ function animateDust(t){
   }
   if (typeof galaxyBand !== 'undefined' && galaxyBand){
     galaxyBand.rotation.y = t*0.000006;
-    galaxyBand.material.opacity = 0.45 + Math.sin(t*0.0006 + 1)*0.15;
   }
   if (typeof screenDust !== 'undefined' && screenDust){
     screenDust.rotation.y = t*0.000005;
-    screenDust.material.opacity = 0.42 + Math.sin(t*0.0008 + 3)*0.12;
+  }
+  /* 缩放感知增强：相机拉得越远，恒定像素层越大越亮（近景 k=0 不受影响） */
+  if (window.__cam && typeof screenDust !== 'undefined' && screenDust && typeof galaxyBand !== 'undefined' && galaxyBand){
+    var camDist = window.__cam.position.distanceTo(window.__controls ? window.__controls.target : new THREE.Vector3());
+    var k = Math.min(1, Math.max(0, (camDist - 80) / 130));   // 80~210 映射 0~1
+    screenDust.material.size   = 2.2 + k*2.6;                 // 2.2 → 4.8
+    screenDust.material.opacity = 0.5 + k*0.34 + Math.sin(t*0.0008 + 3)*0.08;
+    galaxyBand.material.size   = 2.6 + k*2.8;                 // 2.6 → 5.4
+    galaxyBand.material.opacity = 0.5 + k*0.32 + Math.sin(t*0.0006 + 1)*0.1;
   }
   if (typeof coreSwarm !== 'undefined' && coreSwarm){
     coreSwarm.rotation.y = t*0.00025;
