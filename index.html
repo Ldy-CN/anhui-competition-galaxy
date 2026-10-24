@@ -1357,6 +1357,17 @@ document.getElementById('legendCats').innerHTML = CATS.map(c=>
   modal.addEventListener('click', e => { if (e.target === modal) modal.classList.remove('open'); });
 })();
 
+/* ---- 数据监控状态展示（在线时读取 Actions 定时刷新的状态文件；离线静默跳过） ---- */
+fetch('monitor/monitor-state.json').then(r => r.ok ? r.json() : null).then(st => {
+  if (!st || !st.lastCheck) return;
+  const d = new Date(st.lastCheck);
+  const everChanged = Object.values(st.sources || {}).filter(s => s.lastChanged).length;
+  const span = document.createElement('span');
+  span.innerHTML = ' · 🔄 官网监控：最近自动检查 ' + (d.getMonth()+1) + '月' + d.getDate() + '日' +
+    (everChanged ? ' · <b style="color:#facc15">' + everChanged + ' 个来源曾检测到官网更新</b>（详见仓库 Issues）' : ' · 各来源无变化');
+  document.getElementById('aiBar').appendChild(span);
+}).catch(()=>{});
+
 
 /* ---- 筛选（数据层，跨脚本可见） ---- */
 function applyFilter(){
