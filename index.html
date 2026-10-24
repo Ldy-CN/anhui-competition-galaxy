@@ -64,8 +64,14 @@
 
   /* ---------- 今日可报名横幅 ---------- */
   #liveBar{position:absolute;left:18px;bottom:16px;z-index:18;max-width:min(560px,calc(100vw - 36px));
-    display:flex;flex-direction:column;gap:6px;pointer-events:none}
-  .liveTitle{font-size:12px;color:var(--sub);display:flex;align-items:center;gap:6px}
+    display:flex;flex-direction:column;gap:6px;pointer-events:none;transition:background .2s}
+  #liveBar.collapsed{background:rgba(10,14,28,.78);border:1px solid var(--line);border-radius:12px;padding:7px 12px}
+  #liveBar.collapsed .liveChips{display:none}
+  #liveBar.collapsed #aiMore,#liveBar.collapsed #fbOpen{display:none}
+  .liveTitle{font-size:12px;color:var(--sub);display:flex;align-items:center;gap:6px;cursor:pointer;pointer-events:auto;user-select:none}
+  #liveArrow{font-size:9px;margin-left:4px;transition:transform .2s}
+  #liveBar.collapsed #liveArrow{transform:rotate(180deg)}
+  #liveBar.collapsed #liveTitleText{font-size:11.5px}
   .liveDot{width:8px;height:8px;border-radius:50%;background:var(--green);
     box-shadow:0 0 8px var(--green);animation:pulse 1.6s infinite}
   @keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
@@ -334,7 +340,7 @@
 </div>
 
 <div id="liveBar">
-  <div class="liveTitle"><span class="liveDot"></span>今天（10 月 23 日）就可以报名 / 重点关注的窗口</div>
+  <div class="liveTitle" id="liveToggle" title="点击收起 / 展开"><span class="liveDot"></span><span id="liveTitleText">今天（10 月 24 日）就可以报名 / 重点关注的窗口</span><span id="liveArrow">▼</span></div>
   <div class="liveChips" id="liveChips"></div>
 </div>
 
@@ -2435,7 +2441,31 @@ function switchView(v){
   document.getElementById('v3d').classList.toggle('on', v==='3d');
   document.getElementById('vList').classList.toggle('on', v==='list');
   lv.style.display = v==='list' ? 'block' : 'none';
+  /* 榜单视图下自动收起左下角横幅，避免遮挡卡片（3D 视图恢复用户偏好） */
+  const bar = document.getElementById('liveBar');
+  if (v === 'list'){ bar.classList.add('collapsed'); document.getElementById('liveArrow').textContent = '▲'; }
+  else {
+    const pref = localStorage.getItem('gxjs_liveCollapsed') === '1';
+    bar.classList.toggle('collapsed', pref);
+    document.getElementById('liveArrow').textContent = pref ? '▲' : '▼';
+  }
 }
+
+/* ---- 横幅收起 / 展开（状态记忆） ---- */
+(function liveToggle(){
+  const bar = document.getElementById('liveBar');
+  const arrow = document.getElementById('liveArrow');
+  function apply(pref){
+    bar.classList.toggle('collapsed', pref);
+    arrow.textContent = pref ? '▲' : '▼';
+  }
+  apply(localStorage.getItem('gxjs_liveCollapsed') === '1');
+  document.getElementById('liveToggle').onclick = ()=>{
+    const now = !bar.classList.contains('collapsed');
+    localStorage.setItem('gxjs_liveCollapsed', now ? '1' : '0');
+    apply(now);
+  };
+})();
 
 
 /* ---- 榜单 ---- */
@@ -2467,6 +2497,9 @@ function renderList(){
 /* ---- 今日可报名横幅 ---- */
 function buildLiveBar(){
   const box = document.getElementById('liveChips');
+  const dNow = new Date();
+  document.getElementById('liveTitleText').textContent =
+    '今天（' + (dNow.getMonth()+1) + ' 月 ' + dNow.getDate() + ' 日）就可以报名 / 重点关注的窗口';
   const live = items.filter(it=>it.wLive).sort((a,b)=>b.score-a.score);
   const soon = items.filter(it=>it.wStart && !it.wLive)
     .filter(it=>(it.wStart-new Date())/86400000<=60)
