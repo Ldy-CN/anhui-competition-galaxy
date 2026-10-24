@@ -325,6 +325,7 @@
 })();
 </script>
 <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+<script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
 <link rel="preconnect" href="https://registry.npmmirror.com" crossorigin>
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="preload" as="script" href="three.min.js">
@@ -391,7 +392,7 @@
 
 <div id="hint">拖拽旋转 · 滚轮指哪缩哪（SolidWorks 式焦点缩放） · 近处卡片自动变淡 · 点击卡片查看详情</div>
 
-<div id="aiBar">⚠ 本站全部内容由 AI 依据各赛事官网公开通知整理生成，仅供参考 · 报名信息请以官网最新通知为准 · <span id="aiMore">查看完整声明</span> · <span id="fbOpen">💬 反馈纠错</span></div>
+<div id="aiBar">⚠ 本站全部内容由 AI 依据各赛事官网公开通知整理生成，仅供参考 · 报名信息请以官网最新通知为准 · <span id="aiMore">查看完整声明</span> · <span id="fbOpen">💬 反馈纠错</span><span id="visitStat" style="display:none"> · 👥 本站已接待 <b id="busuanzi_value_site_uv" style="color:#7ee0a8">…</b> 位访客 · 累计 <b id="busuanzi_value_site_pv" style="color:#7ee0a8">…</b> 次访问（同访客不重复计数）</span></div>
 
 <div id="fbModal">
   <div class="aim">
@@ -1850,6 +1851,27 @@ fetch('monitor/monitor-state.json').then(r => r.ok ? r.json() : null).then(st =>
     (everChanged ? ' · <b style="color:#facc15">' + everChanged + ' 个来源曾检测到官网更新</b>（详见仓库 Issues）' : ' · 各来源无变化');
   document.getElementById('aiBar').appendChild(span);
 }).catch(()=>{});
+
+/* ---- 访问统计展示（不蒜子：UV 同访客去重；数据到达后才显示，离线/服务不可用保持隐藏） ---- */
+(function visitStat(){
+  const box = document.getElementById('visitStat');
+  if (!box) return;
+  let tries = 0;
+  const timer = setInterval(() => {
+    tries++;
+    const uv = document.getElementById('busuanzi_value_site_uv');
+    const pv = document.getElementById('busuanzi_value_site_pv');
+    const uvNum = uv && parseInt(uv.textContent, 10);
+    if (uvNum > 0){                                   // 数据已填充 → 展示
+      clearInterval(timer);
+      if (pv && !parseInt(pv.textContent, 10)) pv.textContent = uvNum;
+      box.style.display = 'inline';
+    } else if (tries > 36){                           // 18s 无数据（离线/失败）→ 静默移除
+      clearInterval(timer);
+      box.remove();
+    }
+  }, 500);
+})();
 
 
 /* ---- 筛选（数据层，跨脚本可见） ---- */
