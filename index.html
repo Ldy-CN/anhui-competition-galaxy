@@ -395,12 +395,13 @@
     <div style="font-size:11.5px;color:var(--sub);margin-top:4px;line-height:1.6">填得越全，推荐分越准。画像只保存在本机浏览器，不会上传。</div>
   </div>
   <div class="pb">
-    <div class="kv"><div class="k">专业 类别</div><select id="pfMajor" class="pfsel"></select></div>
+    <div class="kv"><div class="k">专业 大类</div><select id="pfMajor" class="pfsel"></select></div>
+    <div class="kv"><div class="k">细分 专业</div><select id="pfSub" class="pfsel"></select></div>
     <div class="kv"><div class="k">学校 层次</div><select id="pfSchool" class="pfsel"></select></div>
     <div class="kv"><div class="k">当前 年级</div><div id="pfGrade" class="chiprow"></div></div>
-    <div class="kv"><div class="k">掌握的 技能（可多选）</div><div id="pfSkills" class="chiprow"></div></div>
-    <div class="kv"><div class="k">感兴趣的 方向（可多选）</div><div id="pfInter" class="chiprow"></div></div>
-    <div class="kv"><div class="k">主要 目的</div><div id="pfGoal" class="chiprow"></div></div>
+    <div class="kv"><div class="k">掌握的 技能（14 项细分，可多选）</div><div id="pfSkills" class="chiprow"></div></div>
+    <div class="kv"><div class="k">兴趣 方向（16 个细分，可多选）</div><div id="pfInter" class="chiprow"></div></div>
+    <div class="kv"><div class="k">主要 目的（可多选）</div><div id="pfGoal" class="chiprow"></div></div>
     <button id="pfApply" class="siteBtn" style="width:100%;justify-content:center;margin-top:6px">应用画像 · 全站重新打分</button>
     <button id="pfReset" style="width:100%;margin-top:8px;padding:8px;border-radius:20px;border:1px solid var(--line);background:rgba(255,255,255,.04);color:var(--sub);cursor:pointer;font-size:12px">重置为通用画像</button>
     <div style="font-size:11px;color:var(--sub);margin-top:12px;line-height:1.8">
@@ -1481,37 +1482,154 @@ const CATS = [
 ];
 
 /* ---------- 个性化推荐引擎：浏览者画像 → 动态推荐分 ---------- */
-/* 专业类别 → 六大竞赛类别的匹配权重（满分 35） */
-const MAJOR_MAP = {
-  mech:   {smart:33, mech:35, elec:29, innov:19, basic:26, arts:10},
-  elec:   {smart:31, mech:23, elec:35, innov:19, basic:24, arts:9},
-  cs:     {smart:21, mech:16, elec:35, innov:26, basic:26, arts:12},
-  energy: {smart:35, mech:26, elec:26, innov:19, basic:30, arts:9},
-  civil:  {smart:26, mech:21, elec:19, innov:19, basic:31, arts:12},
-  biz:    {smart:10, mech:9,  elec:14, innov:35, basic:21, arts:23},
-  liberal:{smart:7,  mech:5,  elec:9,  innov:26, basic:14, arts:35},
-  art:    {smart:9,  mech:14, elec:12, innov:23, basic:9,  arts:35},
-  sci:    {smart:23, mech:19, elec:23, innov:21, basic:35, arts:16},
-  med:    {smart:7,  mech:5,  elec:10, innov:19, basic:26, arts:21},
-  teacher:{smart:9,  mech:7,  elec:12, innov:22, basic:16, arts:28},
-  other:  {smart:21, mech:19, elec:21, innov:24, basic:21, arts:19},
-};
+/* 专业两级结构：大类 → 细分专业；每细分专业一行六维权重 [smart,mech,elec,innov,basic,arts]（满分 35） */
+const DIM_ORDER = ['smart','mech','elec','innov','basic','arts'];
 const MAJOR_LABELS = {
   mech:'机械类', elec:'电子信息类', cs:'计算机/软件类', energy:'能源动力类', civil:'土木建筑类',
   biz:'经管类', liberal:'文史法哲类', art:'艺术设计类', sci:'数理科学类', med:'医学类',
   teacher:'师范类', other:'其他/还没想好',
 };
-const SKILL_LABELS = {
-  modeling:'三维建模（SW/NX/CAD）', mcu:'单片机/嵌入式', coding:'编程（C/Python等）', circuit:'电路/PCB',
-  data:'数据分析', writing:'写作/论文', speech:'演讲/答辩/路演', design:'设计软件（PS/UI）', english:'英语好',
+const MAJORS = {
+  mech: { label:'机械类', subs:{
+    '机械设计制造及其自动化':[30,35,26,19,25,10],
+    '机械电子工程':[32,32,32,18,25,9],
+    '智能制造工程':[33,30,28,20,24,10],
+    '车辆工程':[28,33,28,18,24,10],
+    '材料成型及控制工程':[24,33,20,17,26,10],
+    '过程装备与控制工程':[28,30,24,17,27,10],
+    '机器人工程':[30,26,33,19,22,10],
+    '工业设计（机械向）':[18,26,14,24,10,30],
+  }},
+  elec: { label:'电子信息类', subs:{
+    '电子信息工程':[30,22,35,18,25,9],
+    '通信工程':[24,16,35,18,24,9],
+    '微电子科学与工程':[22,14,33,16,28,9],
+    '人工智能':[26,14,33,26,22,12],
+    '物联网工程':[26,18,33,22,22,10],
+    '光电信息科学与工程':[24,16,32,16,28,9],
+    '电子科学与技术':[24,18,34,16,27,9],
+  }},
+  cs: { label:'计算机/软件类', subs:{
+    '计算机科学与技术':[22,14,35,27,26,12],
+    '软件工程':[20,12,35,29,25,12],
+    '网络工程':[20,12,34,26,25,12],
+    '数据科学与大数据技术':[20,12,30,28,32,12],
+    '智能科学与技术':[24,14,33,27,24,12],
+  }},
+  energy: { label:'能源动力类', subs:{
+    '能源与动力工程':[35,28,24,18,32,9],
+    '新能源科学与工程':[35,26,24,20,30,9],
+    '储能科学与工程':[33,24,26,20,30,9],
+  }},
+  civil: { label:'土木建筑类', subs:{
+    '土木工程':[22,20,16,18,35,11],
+    '建筑环境与能源应用工程':[26,22,18,17,31,11],
+    '工程管理':[20,16,14,26,28,14],
+    '智能建造':[28,20,20,18,33,10],
+  }},
+  biz: { label:'经管类', subs:{
+    '工商管理/市场营销/人力资源':[10,8,12,35,20,24],
+    '电子商务':[12,8,16,35,20,22],
+    '金融学/投资学':[8,6,12,32,22,20],
+    '会计学/财务管理':[8,6,10,32,22,20],
+    '国际经济与贸易':[8,8,12,32,18,26],
+    '管理科学与工程类（信管等）':[16,12,20,32,26,14],
+  }},
+  liberal: { label:'文史法哲类', subs:{
+    '汉语言文学':[8,5,6,28,14,35],
+    '法学':[6,4,6,26,12,35],
+    '新闻传播学类':[10,5,10,28,16,33],
+    '英语及其他外语':[14,5,12,24,16,32],
+    '历史学/哲学':[6,4,5,24,14,35],
+  }},
+  art: { label:'艺术设计类', subs:{
+    '视觉传达设计':[8,12,8,24,8,35],
+    '环境设计':[8,14,8,22,8,35],
+    '产品设计':[14,24,10,22,8,30],
+    '数字媒体艺术':[10,16,14,24,10,33],
+  }},
+  sci: { label:'数理科学类', subs:{
+    '数学与应用数学':[22,14,26,24,35,14],
+    '物理学':[20,14,26,20,35,14],
+    '应用化学':[16,12,18,18,32,14],
+    '应用心理学':[10,6,14,26,20,26],
+  }},
+  med: { label:'医学类', subs:{
+    '临床医学':[6,4,10,18,30,22],
+    '药学':[5,4,8,16,30,24],
+    '医学检验技术':[6,5,10,16,30,24],
+    '护理学':[4,3,6,14,26,26],
+  }},
+  teacher: { label:'师范类', subs:{
+    '师范类专业（各学科）':[9,7,12,22,16,30],
+  }},
+  other: { label:'其他/还没想好', subs:null, row:[21,19,21,24,21,19] },
 };
+function majorRowOf(pf){
+  const grp = MAJORS[pf.major] || MAJORS.other;
+  if (grp.subs && pf.sub && grp.subs[pf.sub]) {
+    const o = {}; DIM_ORDER.forEach((k,i)=> o[k] = grp.subs[pf.sub][i]); return o;
+  }
+  const row = grp.row || [21,19,21,24,21,19];
+  const o = {}; DIM_ORDER.forEach((k,i)=> o[k] = row[i]); return o;
+}
+
+/* 技能体系 v2：14 项细分（旧 9 项 key 自动迁移） */
+const SKILL_LABELS = {
+  model3d:'三维建模（SW/NX/CAD）', drawing:'工程制图/CAD 出图', cae:'仿真分析（CAE/数字孪生）', print3d:'增材制造/3D 打印',
+  mcu:'单片机/嵌入式', coding:'编程（C/Python 等）', circuit:'电路设计/PCB', plc:'PLC/工业自动化',
+  data:'数据分析', writing:'写作/论文', speech:'演讲/答辩/路演', design:'平面/UI 设计',
+  video:'视频剪辑/动画', english:'英语',
+};
+const SKILL_MIGRATE = { modeling:['model3d'], mcu:['mcu'], coding:['coding'], circuit:['circuit'],
+  data:['data'], writing:['writing'], speech:['speech'], design:['design'], english:['english'] };
+const SKILL_EXTRA = {
+  '"西门子杯"中国智能制造挑战赛（CIMC）':['cae','plc'],
+  '蓝桥杯数字科技创新赛 · 智能装备数字化建模大赛':['cae'],
+  '中国大学生工程实践与创新能力大赛（安徽赛区选拔赛）':['cae'],
+  '中国大学生机械工程创新创意大赛':['cae'],
+  '中国大学生计算机设计大赛（安徽省级赛）':['video'],
+  '全国大学生广告艺术大赛（安徽赛区）':['video'],
+};
+function migrateSkills(arr, extraKey){
+  const out = [];
+  (arr||[]).forEach(k => (SKILL_MIGRATE[k]||[k]).forEach(n => { if (out.indexOf(n)<0) out.push(n); }));
+  (SKILL_EXTRA[extraKey]||[]).forEach(n => { if (out.indexOf(n)<0) out.push(n); });
+  return out;
+}
+
+/* 兴趣标签池：16 个细分方向，每个映射到竞赛类别（命中标签 → 相关类别 +5，上限 10） */
+const INTEREST_POOL = [
+  { k:'industry', label:'智能制造/工业自动化', cats:['smart'] },
+  { k:'robot',    label:'机器人/无人机',       cats:['smart','elec'] },
+  { k:'cad',      label:'三维建模/数字化设计', cats:['mech'] },
+  { k:'newenergy',label:'新能源/双碳',         cats:['smart'] },
+  { k:'embedded', label:'嵌入式/硬件',         cats:['elec'] },
+  { k:'coding',   label:'编程/软件开发',       cats:['elec','innov'] },
+  { k:'ai',       label:'人工智能/大模型',     cats:['elec','innov'] },
+  { k:'math',     label:'数学/物理',           cats:['basic'] },
+  { k:'startup',  label:'创新创业/商业',       cats:['innov'] },
+  { k:'creative', label:'设计/创意',           cats:['arts'] },
+  { k:'writing2', label:'写作/调研',           cats:['basic','innov'] },
+  { k:'speech2',  label:'演讲/路演',           cats:['innov','arts'] },
+  { k:'craft',    label:'技能实操/证书',       cats:['smart'] },
+  { k:'foreign',  label:'外语',                cats:['arts'] },
+  { k:'structure',label:'结构/建筑',           cats:['basic'] },
+  { k:'chip',     label:'电子设计/芯片',       cats:['elec'] },
+];
+
 const SCHOOL_LABELS = { top:'985/211/双一流', yb:'普通一本', eb:'普通二本', zk:'专科' };
 const GOAL_LABELS = { research:'考研/保研加分', award:'综测/评奖刷分', job:'就业/技能', fun:'兴趣探索' };
 
-/* 当前画像（首次打开用中性默认值；之后从 localStorage 恢复） */
+/* 当前画像（首次打开用中性默认值；localStorage 恢复并自动迁移旧字段） */
 let profile = (() => {
-  try { const s = localStorage.getItem('gxjs_profile'); if (s) { const o = JSON.parse(s); if (o && o.major) return o; } } catch(e){}
-  return { major:'other', grade:2, school:'eb', skills:[], interests:[], goal:'' };
+  try { const s = localStorage.getItem('gxjs_profile'); if (s) { const o = JSON.parse(s); if (o && o.major) {
+    if (typeof o.goal === 'string') o.goals = o.goal ? [o.goal] : [];   // 旧版单选 → 多选
+    if (o.skills) o.skills = o.skills.reduce((acc,k)=>acc.concat(SKILL_MIGRATE[k]||[k]), []);
+    o.sub = o.sub || ''; o.interests = o.interests || [];
+    return o;
+  } } } catch(e){}
+  return { major:'other', sub:'', grade:2, school:'eb', skills:[], interests:[], goals:[] };
 })();
 
 /* 赛道级适配度：技能命中率 + 专业微调 → strong/mid/low/no 四档 */
@@ -1520,25 +1638,30 @@ function trackFit(tr, it, pf){
   const needs = tr.s || [];
   const hits = needs.filter(x => (pf.skills||[]).indexOf(x) >= 0).length;
   let sc = needs.length ? hits/needs.length : 0.5;
-  const mRow = MAJOR_MAP[pf.major] || MAJOR_MAP.other;
+  const mRow = majorRowOf(pf);
   sc += ((mRow[it.cat] != null ? mRow[it.cat] : 20)/35 - 0.5)*0.4;
   return { sc: sc, tag: sc >= 0.55 ? 'strong' : (sc >= 0.3 ? 'mid' : 'low') };
 }
 
-/* 评分：五维加权（专业35+技能25+年级10+可达15+兴趣10）+ 目的加成5 + 赛道契合6，cap 100 */
+/* 评分：专业35 + 技能25 + 年级10 + 可达15 + 兴趣10 + 目的5（多选） + 赛道契合6，cap 100 */
 function computeScoreDetail(it, pf){
   const parts = {};
-  const mRow = MAJOR_MAP[pf.major] || MAJOR_MAP.other;
+  const mRow = majorRowOf(pf);
   parts.major = (mRow[it.cat] != null) ? mRow[it.cat] : 20;
   const needs = it.skills || [];
-  const hits = needs.filter(x => (pf.skills||[]).includes(x)).length;
+  const hits = needs.filter(x => (pf.skills||[]).indexOf(x) >= 0).length;
   parts.skill = needs.length ? Math.round(5 + 20*hits/needs.length) : 13;
   const by = it.bestYear || [1,2,3,4];
   parts.year = by.includes(pf.grade) ? 10 : (Math.min.apply(null, by.map(y=>Math.abs(y-pf.grade)))===1 ? 6 : 2);
   const sb = {top:4.5, yb:3.6, eb:3.0, zk:2.6}[pf.school] || 3;
   parts.reach = Math.max(0, Math.round(15 - Math.abs((it.intensity||3) - sb)*3.5));
-  parts.interest = (pf.interests||[]).includes(it.cat) ? 10 : 0;
-  parts.goal = (it.goal && pf.goal && it.goal.indexOf(pf.goal) >= 0) ? 5 : 0;
+  let cover = 0;
+  (pf.interests||[]).forEach(k => {
+    const tag = INTEREST_POOL.find(x => x.k === k);
+    if (tag && tag.cats.indexOf(it.cat) >= 0) cover++;
+  });
+  parts.interest = Math.min(10, cover*5);
+  parts.goal = ((pf.goals||[]).some(g => (it.goal||[]).indexOf(g) >= 0)) ? 5 : 0;
   parts.track = 0;
   if (it.tracks && it.tracks.length){
     const best = Math.max.apply(null, it.tracks.map(tr => trackFit(tr, it, pf).sc));
@@ -2087,6 +2210,9 @@ const TRACKS = {
   ],
 };
 Object.keys(TRACKS).forEach(n => { const hit = DATA.find(d => d.name === n); if (hit) hit.tracks = TRACKS[n]; });
+/* 技能体系 v2：旧 key 自动迁移 + 重点竞赛追加细分技能 */
+DATA.forEach(d => d.skills = migrateSkills(d.skills, d.name));
+Object.keys(TRACKS).forEach(n => TRACKS[n].forEach(tr => tr.s = migrateSkills(tr.s, null)));
 /* 按关键词匹配挂到各赛事（INTROS 关键词经校验互不冲突，61/61 全命中） */
 INTROS.forEach(x => { const hit = DATA.find(d => d.name === x.k); if (hit) hit.intro = x.t; });
 
@@ -2372,10 +2498,25 @@ document.getElementById('legendCats').innerHTML = CATS.map(c=>
   Object.keys(MAJOR_LABELS).forEach(k=>{
     const o = document.createElement('option'); o.value = k; o.textContent = MAJOR_LABELS[k]; mSel.appendChild(o);
   });
+  const subSel = document.getElementById('pfSub');
   const sSel = document.getElementById('pfSchool');
   Object.keys(SCHOOL_LABELS).forEach(k=>{
     const o = document.createElement('option'); o.value = k; o.textContent = SCHOOL_LABELS[k]; sSel.appendChild(o);
   });
+  function fillSubs(){
+    subSel.innerHTML = '';
+    const grp = MAJORS[mSel.value];
+    if (!grp || !grp.subs){
+      const o = document.createElement('option'); o.value = ''; o.textContent = '（该大类无细分）'; subSel.appendChild(o);
+      subSel.disabled = true; return;
+    }
+    subSel.disabled = false;
+    const o0 = document.createElement('option'); o0.value = ''; o0.textContent = '不细分（按大类平均）'; subSel.appendChild(o0);
+    Object.keys(grp.subs).forEach(name=>{
+      const o = document.createElement('option'); o.value = name; o.textContent = name; subSel.appendChild(o);
+    });
+  }
+  mSel.addEventListener('change', ()=>{ fillSubs(); profile.sub = ''; subSel.value = ''; });
   const gRow = document.getElementById('pfGrade');
   ['大一','大二','大三','大四'].forEach((t,i)=>{
     const c = document.createElement('span'); c.className = 'pchip'; c.textContent = t; c.dataset.g = i+1;
@@ -2389,13 +2530,13 @@ document.getElementById('legendCats').innerHTML = CATS.map(c=>
     sRow.appendChild(c);
   });
   const iRow = document.getElementById('pfInter');
-  CATS.forEach(c=>{
-    const el = document.createElement('span'); el.className = 'pchip'; el.textContent = c.name; el.dataset.c = c.id;
+  INTEREST_POOL.forEach(tag=>{
+    const el = document.createElement('span'); el.className = 'pchip'; el.textContent = tag.label; el.dataset.i = tag.k;
     el.onclick = ()=>{
       el.classList.toggle('on');
       const on = el.classList.contains('on');
-      el.style.background = on ? c.color : '';
-      el.style.color = on ? '#081018' : '';
+      el.style.background = on ? '#7a5bff' : '';
+      el.style.color = on ? '#fff' : '';
       el.style.borderColor = on ? 'transparent' : '';
     };
     iRow.appendChild(el);
@@ -2403,41 +2544,38 @@ document.getElementById('legendCats').innerHTML = CATS.map(c=>
   const g2Row = document.getElementById('pfGoal');
   Object.keys(GOAL_LABELS).forEach(k=>{
     const c = document.createElement('span'); c.className = 'pchip'; c.textContent = GOAL_LABELS[k]; c.dataset.g2 = k;
-    c.onclick = ()=>{
-      if (c.classList.contains('on')) { c.classList.remove('on'); return; }
-      g2Row.querySelectorAll('.pchip').forEach(x=>x.classList.remove('on'));
-      c.classList.add('on');
-    };
+    c.onclick = ()=> c.classList.toggle('on');   // 目的可多选
     g2Row.appendChild(c);
   });
 
   function syncUI(){
-    mSel.value = profile.major; sSel.value = profile.school;
+    mSel.value = profile.major; fillSubs(); subSel.value = profile.sub || '';
+    if (!subSel.value && subSel.options.length) subSel.selectedIndex = 0;
+    sSel.value = profile.school;
     gRow.querySelectorAll('.pchip').forEach(x=>x.classList.toggle('on', +x.dataset.g === profile.grade));
     sRow.querySelectorAll('.pchip').forEach(x=>x.classList.toggle('on', (profile.skills||[]).indexOf(x.dataset.s) >= 0));
     iRow.querySelectorAll('.pchip').forEach(x=>{
-      const on = (profile.interests||[]).indexOf(x.dataset.c) >= 0;
+      const on = (profile.interests||[]).indexOf(x.dataset.i) >= 0;
       x.classList.toggle('on', on);
-      const col = catColor(x.dataset.c);
-      x.style.background = on ? col : '';
-      x.style.color = on ? '#081018' : '';
+      x.style.background = on ? '#7a5bff' : '';
+      x.style.color = on ? '#fff' : '';
       x.style.borderColor = on ? 'transparent' : '';
     });
-    g2Row.querySelectorAll('.pchip').forEach(x=>x.classList.toggle('on', x.dataset.g2 === profile.goal));
+    g2Row.querySelectorAll('.pchip').forEach(x=>x.classList.toggle('on', (profile.goals||[]).indexOf(x.dataset.g2) >= 0));
   }
   syncUI();
 
   document.getElementById('pfApply').onclick = ()=>{
     const skills = Array.prototype.map.call(sRow.querySelectorAll('.pchip.on'), x=>x.dataset.s);
-    const interests = Array.prototype.map.call(iRow.querySelectorAll('.pchip.on'), x=>x.dataset.c);
+    const interests = Array.prototype.map.call(iRow.querySelectorAll('.pchip.on'), x=>x.dataset.i);
+    const goals = Array.prototype.map.call(g2Row.querySelectorAll('.pchip.on'), x=>x.dataset.g2);
     const g = gRow.querySelector('.pchip.on');
-    const g2 = g2Row.querySelector('.pchip.on');
-    applyProfile({ major: mSel.value, grade: g ? +g.dataset.g : 2, school: sSel.value,
-                   skills: skills, interests: interests, goal: g2 ? g2.dataset.g2 : '' });
+    applyProfile({ major: mSel.value, sub: subSel.disabled ? '' : subSel.value, grade: g ? +g.dataset.g : 2,
+                   school: sSel.value, skills: skills, interests: interests, goals: goals });
     box.classList.remove('open');
   };
   document.getElementById('pfReset').onclick = ()=>{
-    applyProfile({ major:'other', grade:2, school:'eb', skills:[], interests:[], goal:'' });
+    applyProfile({ major:'other', sub:'', grade:2, school:'eb', skills:[], interests:[], goals:[] });
     syncUI();
   };
 })();
