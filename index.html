@@ -345,7 +345,7 @@
   <div id="legendCats"></div>
 </div>
 
-<div id="hint">拖拽旋转 · 滚轮缩放 · 近处卡片自动变淡透出后面 · 点击卡片查看详情</div>
+<div id="hint">拖拽旋转 · 滚轮指哪缩哪（SolidWorks 式焦点缩放） · 近处卡片自动变淡 · 点击卡片查看详情</div>
 
 <div id="aiBar">⚠ 本站全部内容由 AI 依据各赛事官网公开通知整理生成，仅供参考 · 报名信息请以官网最新通知为准 · <span id="aiMore">查看完整声明</span> · <span id="fbOpen">💬 反馈纠错</span></div>
 
@@ -2527,7 +2527,47 @@ renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 renderer.setClearColor(0x05070f);
 stage.appendChild(renderer.domElement);
 
+/* SolidWorks 风格缩放：以指针位置为焦点（先于 OrbitControls 注册并拦截其滚轮事件） */
+(function pointerZoom(){
+  const pzRay = new THREE.Raycaster();
+  const pzNdc = new THREE.Vector3();
+  const pzPlane = new THREE.Plane(new THREE.Vector3(0,1,0), 0);
+  const pzHit = new THREE.Vector3();
+  renderer.domElement.addEventListener('wheel', function(e){
+    e.preventDefault();
+    e.stopImmediatePropagation();          // 阻止 OrbitControls 的默认 dolly
+    controls.autoRotate = false;           // 缩放时暂停自动旋转，保证焦点精确
+    pauseUntil = performance.now() + 9000;
+    if (e.deltaY === 0) return;
+    const k = e.deltaY > 0 ? 1.12 : 1/1.12;
+    pzNdc.set((e.clientX/innerWidth)*2-1, -(e.clientY/innerHeight)*2+1, 0.5);
+    pzRay.setFromCamera(pzNdc, camera);
+    let focus = null;
+    const hits = pzRay.intersectObjects(items.filter(i=>i.visible!==false && i.mesh).map(i=>i.mesh));
+    if (hits.length) focus = hits[0].point.clone();
+    if (!focus && pzRay.ray.intersectPlane(pzPlane, pzHit) && camera.position.distanceTo(pzHit) < 200) {
+      focus = pzHit.clone();               // 未命中卡片时以地面交点为焦点
+    }
+    const zoomTo = F => {
+      const np = F.clone().add(camera.position.clone().sub(F).multiplyScalar(k));
+      const nt = F.clone().add(controls.target.clone().sub(F).multiplyScalar(k));
+      const dist = np.distanceTo(nt);
+      if (dist < 12 || dist > 240) return; // 缩放范围限制
+      camera.position.copy(np);
+      controls.target.copy(nt);
+      controls.update();
+    };
+    if (focus && camera.position.distanceTo(focus) > 5) zoomTo(focus);
+    else {
+      const dir = camera.position.clone().sub(controls.target).multiplyScalar(k);
+      const dist = dir.length();
+      if (dist >= 12 && dist <= 240) { camera.position.copy(controls.target.clone().add(dir)); controls.update(); }
+    }
+  }, { passive: false });
+})();
+
 const controls = new THREE.OrbitControls(camera, renderer.domElement);
+window.__cam = camera; window.__controls = controls;   // 调试/测试钩子
 controls.enableDamping = true; controls.dampingFactor = .06;
 controls.minDistance = 20; controls.maxDistance = 240;
 controls.maxPolarAngle = Math.PI * .55;
