@@ -1940,11 +1940,14 @@ function mainRun(){
 const stage = document.getElementById('stage');
 const scene = new THREE.Scene();
 scene.fog = new THREE.FogExp2(0x05070f, 0.0035);
-const camera = new THREE.PerspectiveCamera(55, innerWidth/innerHeight, 0.1, 2000);
+/* 视口尺寸：用 documentElement 尺寸（移动端 meta viewport 下 innerWidth 可能返回 800×1732 的错误布局视口） */
+function viewW(){ return document.documentElement.clientWidth || innerWidth; }
+function viewH(){ return document.documentElement.clientHeight || innerHeight; }
+const camera = new THREE.PerspectiveCamera(55, viewW()/viewH(), 0.1, 2000);
 camera.position.set(0, 46, 98);
 if (camera.aspect < 0.9) camera.position.multiplyScalar(1.15 + (0.9 - camera.aspect) * 0.5);   // 竖屏视野窄，取景拉远
 const renderer = new THREE.WebGLRenderer({antialias:true, alpha:false});
-renderer.setSize(innerWidth, innerHeight);
+renderer.setSize(viewW(), viewH());
 renderer.setPixelRatio(Math.min(devicePixelRatio, window.IS_MOBILE ? 1.5 : 2));
 renderer.setClearColor(0x05070f);
 stage.appendChild(renderer.domElement);
@@ -1962,7 +1965,7 @@ stage.appendChild(renderer.domElement);
     pauseUntil = performance.now() + 9000;
     if (e.deltaY === 0) return;
     const k = e.deltaY > 0 ? 1.12 : 1/1.12;
-    pzNdc.set((e.clientX/innerWidth)*2-1, -(e.clientY/innerHeight)*2+1, 0.5);
+    pzNdc.set((e.clientX/viewW())*2-1, -(e.clientY/viewH())*2+1, 0.5);
     pzRay.setFromCamera(pzNdc, camera);
     let focus = null;
     const hits = pzRay.intersectObjects(items.filter(i=>i.visible!==false && i.mesh).map(i=>i.mesh));
@@ -2475,8 +2478,8 @@ let hovered=null, selected=null, camAnim=null;
 const tip = document.getElementById('tip');
 
 function setPtr(e){
-  ptr.x = (e.clientX/innerWidth)*2-1;
-  ptr.y = -(e.clientY/innerHeight)*2+1;
+  ptr.x = (e.clientX/viewW())*2-1;
+  ptr.y = -(e.clientY/viewH())*2+1;
 }
 function pick(){
   ray.setFromCamera(ptr, camera);
@@ -2586,8 +2589,8 @@ function tick(t){
 }
 requestAnimationFrame(tick);
 addEventListener('resize', ()=>{
-  camera.aspect = innerWidth/innerHeight; camera.updateProjectionMatrix();
-  renderer.setSize(innerWidth, innerHeight);
+  camera.aspect = viewW()/viewH(); camera.updateProjectionMatrix();
+  renderer.setSize(viewW(), viewH());
 });
 }
 </script>
