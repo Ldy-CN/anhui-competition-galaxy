@@ -220,8 +220,8 @@
   .fbClose{width:100%;padding:8px;border-radius:12px;border:1px solid var(--line);
     background:rgba(255,255,255,.04);color:var(--sub);cursor:pointer;font-size:12px}
   .fixlink{color:#e8c37a;text-decoration:underline;cursor:pointer}
-  /* ---------- 移动端适配（兼容性优先：仅 flex-wrap/百分比/字号等老特性） ---------- */
-  @media (max-width:820px){
+  /* ---------- 移动端/Pad 适配（兼容性优先：仅 flex-wrap/百分比/字号等老特性） ---------- */
+  @media (max-width:1024px){
     #topbar{padding:8px 12px 6px}
     #topbar h1{font-size:15px;white-space:normal;line-height:1.4}
     #topbar .tag{display:none}
@@ -235,9 +235,11 @@
     #scoreMin,#scoreMax{width:76px}
     #sensSel{width:70px}
     .scoreLabel{font-size:11px}
-    #liveBar{left:10px;right:10px;bottom:10px;max-width:calc(100vw - 20px)}
+    #liveBar{left:10px;right:10px;bottom:52px;max-width:calc(100vw - 20px)}
     .liveTitle{font-size:11px}
     #hint{font-size:10px;bottom:6px;max-width:calc(100vw - 24px);text-align:center}
+    /* 声明条贴底全宽（Pad 端此前被左下横幅遮挡不可见），横幅上移至其上方 */
+    #aiBar{bottom:10px;left:10px;right:10px;transform:none;max-width:calc(100vw - 20px);font-size:10px;padding:5px 10px;z-index:17}
     #panel{width:100vw;right:-100vw} #panel.open{right:0}
     #pfPanel{width:100vw;right:-100vw} #pfPanel.open{right:0}
     #panel .pb{padding:14px}
@@ -1685,7 +1687,10 @@ function switchView(v){
     bar.classList.toggle('collapsed', pref);
     arrow.textContent = pref ? '▲' : '▼';
   }
-  apply(localStorage.getItem('gxjs_liveCollapsed') === '1');
+  /* 移动/Pad 默认收起横幅（保声明条可见与点按空间），用户手动展开后记忆生效 */
+  const stored = localStorage.getItem('gxjs_liveCollapsed');
+  const defaultCollapsed = stored === '1' || (stored === null && window.IS_MOBILE);
+  apply(defaultCollapsed);
   document.getElementById('liveToggle').onclick = ()=>{
     const now = !bar.classList.contains('collapsed');
     localStorage.setItem('gxjs_liveCollapsed', now ? '1' : '0');
@@ -2347,26 +2352,23 @@ function makeCard(item){
   roundRect(x,2,2,W-4,H-4,20); x.fill();
   x.strokeStyle=col; x.lineWidth=3; roundRect(x,2,2,W-4,H-4,20); x.stroke();
   // 顶部类别条
-  x.fillStyle=col; roundRect(x,2,2,W-4,58,{tl:20,tr:20,br:0,bl:0}); x.fill();
-  x.fillStyle='rgba(5,8,18,.9)'; x.font='bold 24px Microsoft YaHei';
-  x.fillText(catName(item.cat), 24, 38);
-  x.textAlign='right'; x.font='22px Microsoft YaHei'; x.fillStyle='rgba(5,8,18,.75)';
-  x.fillText(item.lvl.split('·')[0].trim(), W-22, 38); x.textAlign='left';
-  // 名称（两行截断）
-  x.fillStyle='#eef2ff'; x.font='bold 31px Microsoft YaHei';
-  wrapText(x, item.name, 26, 118, W-150, 40, 2);
+  x.fillStyle=col; roundRect(x,2,2,W-4,70,{tl:20,tr:20,br:0,bl:0}); x.fill();
+  x.fillStyle='rgba(5,8,18,.9)'; x.font='bold 30px Microsoft YaHei';
+  x.fillText(catName(item.cat), 26, 46);
+  x.textAlign='right'; x.font='24px Microsoft YaHei'; x.fillStyle='rgba(5,8,18,.75)';
+  x.fillText(item.lvl.split('·')[0].trim(), W-24, 46); x.textAlign='left';
+  // 名称（两行截断，加大字号——星系总览下凑近可读）
+  x.fillStyle='#ffffff'; x.font='bold 42px Microsoft YaHei';
+  wrapText(x, item.name, 28, 140, W-250, 54, 2);
   // 报名窗口
-  x.fillStyle='#93a3c9'; x.font='23px Microsoft YaHei';
+  x.fillStyle='#9fb0d8'; x.font='26px Microsoft YaHei';
   const wt = item.sS ? `${item.sS.replace('-','.')} ~ ${item.sE.replace('-','.')}` : '见校通知';
-  x.fillText('报名  ' + wt, 26, H-52);
-  // 官网
-  x.fillStyle='#64748f'; x.font='19px Microsoft YaHei';
-  x.fillText(item.site, 26, H-24);
-  // 分数
+  x.fillText('报名  ' + wt, 28, H-50);
+  // 分数（超大主视觉，全景一眼辨推荐度）
   const gc = grade(item.score).c;
-  x.fillStyle=gc; x.font='bold 74px Arial';
-  x.textAlign='right'; x.fillText(item.score, W-30, H-64);
-  x.fillStyle='#93a3c9'; x.font='20px Microsoft YaHei'; x.fillText('推荐分', W-30, H-32);
+  x.fillStyle=gc; x.font='bold 116px Arial';
+  x.textAlign='right'; x.fillText(item.score, W-30, H-58);
+  x.fillStyle='#9fb0d8'; x.font='24px Microsoft YaHei'; x.fillText('推荐分', W-30, H-26);
   x.textAlign='left';
   const tex = new THREE.CanvasTexture(c); tex.anisotropy = 4;
   return tex;
@@ -2449,7 +2451,7 @@ function layoutCards(){
       const r = scoreR(it.score);
       const y = r*Math.sin(lat);
       const rr = r*Math.cos(lat);
-      const w = 7.6*shrink;
+      const w = 9.4*shrink;
       const mat = new THREE.MeshBasicMaterial({map:makeCard(it),transparent:true,side:THREE.DoubleSide,opacity:1});
       mat.color.setScalar((0.82 + (it.score/100)*0.5) * 1.8);   // 推荐分越高卡片越亮（待机亮度 ×1.8，压过粒子抢占）
       const m = new THREE.Mesh(new THREE.PlaneGeometry(w, w*4.52/7.6), mat);
