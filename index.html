@@ -94,6 +94,9 @@
     background:var(--panel);border-left:1px solid var(--line);backdrop-filter:blur(14px);
     transition:right .38s cubic-bezier(.22,1,.3,1);display:flex;flex-direction:column;box-shadow:-20px 0 60px rgba(0,0,0,.5)}
   #pfPanel.open{right:0}
+  /* 画像面板遮罩：手机上点面板外即可关闭（面板打开时显示） */
+  #pfMask{position:absolute;inset:0;z-index:31;background:rgba(3,5,10,.45);display:none}
+  #pfMask.open{display:block}
   .pfsel{width:100%;padding:8px 12px;border-radius:10px;border:1px solid var(--line);background:rgba(15,20,40,.9);color:var(--txt);font-size:13px;outline:none}
   .chiprow{display:flex;gap:6px;flex-wrap:wrap}
   .pchip{padding:5px 11px;border-radius:16px;border:1px solid var(--line);font-size:11.5px;cursor:pointer;
@@ -126,8 +129,8 @@
     background:var(--panel);border-left:1px solid var(--line);backdrop-filter:blur(14px);
     transition:right .38s cubic-bezier(.22,1,.3,1);display:flex;flex-direction:column;box-shadow:-20px 0 60px rgba(0,0,0,.5)}
   #panel.open{right:0}
-  #panel .ph{padding:18px 22px 12px;border-bottom:1px solid var(--line);position:relative}
-  #panel .close{position:absolute;top:14px;right:16px;width:30px;height:30px;border-radius:50%;
+  .ph{padding:18px 22px 12px;border-bottom:1px solid var(--line);position:relative}
+  .close{position:absolute;top:14px;right:16px;width:30px;height:30px;border-radius:50%;
     border:1px solid var(--line);background:rgba(255,255,255,.04);color:var(--sub);cursor:pointer;
     font-size:15px;line-height:1;transition:all .18s}
   #panel .close:hover{color:#fff;background:rgba(255,80,80,.25)}
@@ -236,6 +239,7 @@
     .liveTitle{font-size:11px}
     #hint{font-size:10px;bottom:6px;max-width:calc(100vw - 24px);text-align:center}
     #panel{width:100vw;right:-100vw} #panel.open{right:0}
+    #pfPanel{width:100vw;right:-100vw} #pfPanel.open{right:0}
     #panel .pb{padding:14px}
     #legend{display:none} .stat{display:none}
     #bootTitle{font-size:15px}
@@ -468,6 +472,7 @@ if (window.IS_MOBILE) document.getElementById('hint').textContent = '单指拖�
   <div class="pb" id="pBody"></div>
 </div>
 
+<div id="pfMask"></div>
 <div id="pfPanel">
   <div class="ph">
     <button class="close" id="pfClose">✕</button>
@@ -1745,8 +1750,11 @@ document.getElementById('legendCats').innerHTML = CATS.map(c=>
 /* ---- 我的画像面板 ---- */
 (function profilePanel(){
   const box = document.getElementById('pfPanel');
-  document.getElementById('pfOpen').onclick = ()=> box.classList.add('open');
-  document.getElementById('pfClose').onclick = ()=> box.classList.remove('open');
+  const mask = document.getElementById('pfMask');
+  const setOpen = o => { box.classList.toggle('open', o); mask.classList.toggle('open', o); };
+  document.getElementById('pfOpen').onclick = ()=> setOpen(true);
+  document.getElementById('pfClose').onclick = ()=> setOpen(false);
+  mask.onclick = ()=> setOpen(false);   // 手机上点面板外关闭
 
   const mSel = document.getElementById('pfMajor');
   Object.keys(MAJOR_LABELS).forEach(k=>{
