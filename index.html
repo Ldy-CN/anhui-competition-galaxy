@@ -2454,7 +2454,8 @@ function layoutCards(){
       const rr = r*Math.cos(lat);
       const w = 9.4*shrink;
       const mat = new THREE.MeshBasicMaterial({map:makeCard(it),transparent:true,side:THREE.DoubleSide,opacity:1});
-      mat.color.setScalar((0.82 + (it.score/100)*0.5) * 1.8);   // 推荐分越高卡片越亮（待机亮度 ×1.8，压过粒子抢占）
+      it.baseBright = (0.82 + (it.score/100)*0.5) * 1.8;   // 分数基准亮度 ×1.8（实际显示由深度雾调制：面向用户清晰、背面朦胧）
+      mat.color.setScalar(it.baseBright);
       const m = new THREE.Mesh(new THREE.PlaneGeometry(w, w*4.52/7.6), mat);
       m.position.set(Math.cos(lonA)*rr, y, Math.sin(lonA)*rr);
       m.lookAt(m.position.x*2, m.position.y*2, m.position.z*2);   // 球面径向朝外
@@ -2544,7 +2545,8 @@ function flyTo(it){
 window.__flyTo = flyTo;
 /* ---- 筛选 ---- */
 function animCards(t){
-  /* 深度透视：离相机近的卡片自动变淡，避免完全挡住后面的卡片 */
+  /* 深度雾（自然视觉逻辑）：面向相机的卡片清晰明亮，球深处朦胧作背景；
+     悬停/选中的卡片豁免雾化（始终清晰）。分数亮度被深度雾调制，背面高分卡呈柔和辉光 */
   let minD = Infinity, maxD = -Infinity;
   for(const it of items){
     if(!it.mesh) continue;
@@ -2557,10 +2559,13 @@ function animCards(t){
     const m=it.mesh;
     const d = camera.position.distanceTo(m.position);
     const k = (d-minD)/span;                       // 0=离相机最近 1=最远
-    const depthOp = 0.22 + k*0.78;                 // 近处淡至0.22，远处全实
+    const depthOp = 1 - k*0.62;                    // 近实 1.0 → 远 0.38（自然：近清晰远朦胧）
+    const depthBright = 1 - k*0.52;                // 深度雾：远处卡片变暗（朦胧背景）
     const focus = (it===hovered || it===window.__selectedItem);
     const target = focus ? 1 : Math.min(it._targetOpacity, depthOp);
     m.material.opacity += (target - m.material.opacity)*.12;
+    const bb = (it.baseBright || 1) * (focus ? 1 : depthBright);   // 分数亮度 × 深度雾
+    m.material.color.setScalar(bb);
     const b = it.baseScale || 1;                   // 基准尺寸（分数越高越大）
     const ts = (it===hovered||it===selected) ? b*(it._targetOpacity>.5?1.14:it._targetScale) : b*it._targetScale;
     m.scale.x += (ts-m.scale.x)*.15;
