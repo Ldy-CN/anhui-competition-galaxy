@@ -1,10 +1,10 @@
 {
-  "lastCheck": "2026-10-24T11:29:59.955Z",
+  "lastCheck": "2026-10-25T05:51:43.845Z",
   "sources": {
     "安徽省教育厅·竞赛专栏（覆盖全部省赛通知）": {
       "hash": "d9c9753582fd3673",
       "lastChanged": "",
-      "lastStatus": "ok"
+      "lastStatus": "http-403"
     },
     "西门子杯·参赛说明页": {
       "hash": "d143407825875ef5",
@@ -47,8 +47,8 @@
       "lastStatus": "ok"
     },
     "挑战杯官网": {
-      "hash": "e6765078a07d78b6",
-      "lastChanged": "",
+      "hash": "5b52d905deeb371f",
+      "lastChanged": "2026-10-25 05:51 UTC",
       "lastStatus": "ok"
     },
     "数学建模竞赛官网": {
@@ -65,11 +65,6 @@
       "hash": "66edaeae0613fe8b",
       "lastChanged": "",
       "lastStatus": "ok"
-    },
-    "中国高校智能机器人创意大赛官网": {
-      "hash": "",
-      "lastChanged": "",
-      "lastStatus": "http-404"
     }
   }
 }
