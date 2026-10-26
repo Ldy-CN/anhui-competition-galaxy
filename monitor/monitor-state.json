@@ -1,10 +1,10 @@
 {
-  "lastCheck": "2026-10-25T05:51:43.845Z",
+  "lastCheck": "2026-10-26T05:55:09.094Z",
   "sources": {
     "安徽省教育厅·竞赛专栏（覆盖全部省赛通知）": {
       "hash": "d9c9753582fd3673",
       "lastChanged": "",
-      "lastStatus": "http-403"
+      "lastStatus": "error"
     },
     "西门子杯·参赛说明页": {
       "hash": "d143407825875ef5",
@@ -39,7 +39,7 @@
     "金相技能大赛官网": {
       "hash": "57e2c02720bb1ee4",
       "lastChanged": "",
-      "lastStatus": "ok"
+      "lastStatus": "error"
     },
     "机械创新设计大赛官网": {
       "hash": "c77daf4d3b0d14e1",
@@ -47,14 +47,14 @@
       "lastStatus": "ok"
     },
     "挑战杯官网": {
-      "hash": "5b52d905deeb371f",
-      "lastChanged": "2026-10-25 05:51 UTC",
+      "hash": "ec554546ee405dbe",
+      "lastChanged": "2026-10-26 05:54 UTC",
       "lastStatus": "ok"
     },
     "数学建模竞赛官网": {
       "hash": "b29c8628c729e0c5",
       "lastChanged": "",
-      "lastStatus": "ok"
+      "lastStatus": "error"
     },
     "电子设计竞赛官网": {
       "hash": "",
