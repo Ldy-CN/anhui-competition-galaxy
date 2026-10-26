@@ -67,10 +67,11 @@
   /* ---------- 今日可报名横幅 ---------- */
   #liveBar{position:absolute;left:18px;bottom:16px;z-index:18;max-width:min(560px,calc(100vw - 36px));
     display:flex;flex-direction:column;gap:6px;pointer-events:none;transition:background .2s}
-  #liveBar.collapsed{background:rgba(10,14,28,.78);border:1px solid var(--line);border-radius:12px;padding:7px 12px}
+  #liveBar{background:rgba(10,14,28,.88);border:1px solid var(--line);border-radius:12px;padding:9px 13px}
+  #liveBar.collapsed{padding:7px 12px}
   #liveBar.collapsed .liveChips{display:none}
   #liveBar.collapsed #aiMore,#liveBar.collapsed #fbOpen{display:none}
-  .liveTitle{font-size:12px;color:var(--sub);display:flex;align-items:center;gap:6px;cursor:pointer;pointer-events:auto;user-select:none}
+  .liveTitle{font-size:12px;color:var(--sub);display:flex;align-items:center;gap:6px;cursor:pointer;pointer-events:auto;user-select:none;min-height:44px;touch-action:manipulation}
   #liveArrow{font-size:9px;margin-left:4px;transition:transform .2s}
   #liveBar.collapsed #liveArrow{transform:rotate(180deg)}
   #liveBar.collapsed #liveTitleText{font-size:11.5px}
@@ -234,7 +235,7 @@
     #scoreMin,#scoreMax{width:76px}
     #sensSel{width:70px}
     .scoreLabel{font-size:11px}
-    #liveBar{left:10px;right:10px;bottom:52px;max-width:calc(100vw - 20px)}
+    #liveBar{left:10px;right:10px;bottom:52px;max-width:calc(100vw - 20px);max-height:42vh;overflow-y:auto;-webkit-overflow-scrolling:touch}
     .liveTitle{font-size:11px}
     /* 声明条贴底全宽（Pad 端此前被左下横幅遮挡不可见），横幅上移至其上方 */
     #aiBar{bottom:10px;left:10px;right:10px;transform:none;max-width:calc(100vw - 20px);font-size:10px;padding:5px 10px;z-index:17}
@@ -1695,11 +1696,11 @@ function switchView(v){
   const stored = localStorage.getItem('gxjs_liveCollapsed');
   const defaultCollapsed = stored === '1' || (stored === null && window.IS_MOBILE);
   apply(defaultCollapsed);
-  document.getElementById('liveToggle').onclick = ()=>{
-    const now = !bar.classList.contains('collapsed');
-    localStorage.setItem('gxjs_liveCollapsed', now ? '1' : '0');
-    apply(now);
-  };
+  document.getElementById('liveToggle').addEventListener('click', ()=>{
+    const nowV = !bar.classList.contains('collapsed');
+    localStorage.setItem('gxjs_liveCollapsed', nowV ? '1' : '0');
+    apply(nowV);
+  });   // 触屏 click 合成已验证可靠（与画像/详情面板关闭同款机制）
 })();
 
 
