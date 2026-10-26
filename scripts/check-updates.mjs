@@ -123,9 +123,10 @@ if (changedOnes.length && process.env.DEEPSEEK_KEY) {
         '现提供若干「官网页面的最新文本」（刚检测到内容变化的来源）。' +
         '任务：仅当新文本中**明确出现**与某条目相关的最新信息（报名日期调整、比赛时间、组队规则、官网渠道变化等），才输出对该条目的字段更新。' +
         '严格输出 JSON（不要 markdown 代码块）：' +
-        '{"updates":[{"name":"条目名（逐字来自数据库）","fields":{"sS":"MM-DD","sE":"MM-DD","when":"...","team":"...","site":"..."},"summary":"不超过50字变更摘要"}]}。' +
+        '{"updates":[{"name":"条目名（逐字来自数据库）","source":"信息来源的 source 名（逐字来自输入）","fields":{"sS":"MM-DD","sE":"MM-DD","when":"...","team":"...","site":"..."},"summary":"不超过50字变更摘要"}]}。' +
         '规则：sS/sE 必须是 MM-DD 格式；fields 只放确有变化的字段；推断不出就返回 {"updates":[]}；' +
-        '禁止编造日期与规则；宁可漏报不可误报。';
+        '**最高优先级：一切数据必须来源于官网原文**——fields 的每个值都必须逐字摘录自对应来源的 newContent（日期取原文日期转 MM-DD，文本字段直接引用原文片段），' +
+        '禁止改写、总结、推断或填入原文中不存在的任何内容；系统会逐字段回查原文，查不到即整条丢弃；宁可漏报不可误报。';
       const userPrompt = JSON.stringify({ 数据库条目: entries, 官网变化: changes });
 
       const dsRes = await fetch('https://api.deepseek.com/chat/completions', {
@@ -140,9 +141,34 @@ if (changedOnes.length && process.env.DEEPSEEK_KEY) {
       });
       if (dsRes.ok) {
         const out = JSON.parse((await dsRes.json()).choices?.[0]?.message?.content || '{}');
+        /* ---- 溯源硬校验：一切数据必须能在官网原文中找到 ---- */
+        const norm = s => String(s).replace(/\s+/g, '').replace(/[（(]/g, '(').replace(/[）)]/g, ')').toLowerCase();
+        const allText = norm(changes.map(c => c.newContent).join(' '));
+        const dateSet = new Set();   // 官网原文中出现过的所有日期（规范化为 MM-DD）
+        (allText.match(/(\d{1,2})\s*[月\-\.\/]\s*(\d{1,2})\s*日?/g) || []).forEach(tok => {
+          const m = tok.match(/(\d{1,2})\s*[月\-\.\/]\s*(\d{1,2})/);
+          if (m) { dateSet.add(String(m[1]).padStart(2, '0') + '-' + String(m[2]).padStart(2, '0')); }
+        });
+        const溯源OK = (val) => {
+          if (/^\d{2}-\d{2}$/.test(String(val))) return dateSet.has(val);   // 日期字段：官网原文出现过该日期
+          const toks = norm(val).split(/[,，;；。]/).filter(x => x.length >= 2);   // 文本字段：按标点切片段
+          return toks.length > 0 && toks.every(t => allText.includes(t));   // 每个片段逐字出现在官网原文（溯源）
+        };
         const updates = (Array.isArray(out.updates) ? out.updates : [])
-          .filter(u => u && u.name && u.fields && typeof u.fields === 'object');
-        console.log('DeepSeek 建议更新:', updates.length, '条');
+          .filter(u => u && u.name && u.fields && typeof u.fields === 'object')
+          .map(u => {
+            const kept = {}, dropped = [];
+            for (const [k, v] of Object.entries(u.fields || {})) {
+              if (!['sS', 'sE', 'when', 'team', 'site', 'lvl'].includes(k)) continue;
+              if (溯源OK(v)) kept[k] = v;
+              else dropped.push(k + '="' + String(v).slice(0, 40) + '"（官网原文中未找到）');
+            }
+            u.fields = kept;
+            if (dropped.length) console.log('  🛡 溯源拦截 [' + u.name.slice(0, 14) + ']:', dropped.join('; '));
+            return u;
+          })
+          .filter(u => Object.keys(u.fields).length);   // 字段全部被拦 → 整条丢弃
+        console.log('DeepSeek 建议更新:', updates.length, '条（已过溯源校验）');
         if (updates.length) {
           const validKeys = new Set(entries.map(e => e.name));
           const META_PATH = join(ROOT, 'ai', 'data-meta.json');
