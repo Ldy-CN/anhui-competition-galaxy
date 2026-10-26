@@ -1,52 +1,46 @@
-# ✨ AI 点评接入：三步搞定（跟着点就行）
+# ✨ AI 点评：工作原理与开启方法（唯一一步配置）
 
-> 全程免费，约 10 分钟。**卡在任何一步，截图发给 AI 助手即可。**
+> AI 点评功能已内置在网站里，**只差一个 DeepSeek Key**（存放在仓库加密配置里，不会出现在任何网页代码中）。
 
----
+## 它是怎么工作的（全自动）
 
-## 第 1 步：注册 Cloudflare（1 分钟）
+```
+访客在竞赛详情点「提交 AI 点评生成请求」
+  → 自动打开 GitHub Issue（画像已预填，访客直接提交）
+  → GitHub Actions 自动触发：调 DeepSeek 生成点评
+  → 结果写入仓库 ai/recommendations.json（"数据库"）
+  → Pages 自动重新部署，全站生效
+  → 同画像的其他访客直接看到缓存结果，不重复消耗
+```
 
-1. 打开 [dash.cloudflare.com/sign-up](https://dash.cloudflare.com/sign-up)
-2. 输入邮箱、设密码、点邮箱里的验证链接 → 完成注册
-3. 注册后直接进入控制台，**不用添加网站域名**（会提示，跳过即可）
+无外部服务器、无域名依赖、零成本（Actions 免费额度内）。
+单次生成约 6k tokens ≈ **0.02 元**，月成本预计 **< 5 元**。
 
-## 第 2 步：创建 AI 后端（5 分钟）
+## 开启方法（唯一一步，约 2 分钟）
 
-1. 控制台左侧点 **「Workers & Pages」**
-2. 点 **「Create」** → 选 **「Create Worker」** → 名字随便填（比如 `galaxy-ai`）→ 点 **「Deploy」**
-3. 部署成功后点 **「Edit code」**（编辑代码）
-4. 把编辑器里的代码**全部删掉**，粘贴 `worker/deepseek-worker.js` 文件的全部内容
-   （这个文件在项目文件夹 `worker/` 里，用记事本打开复制）
-5. **改文件最上面两行**：
-   - 第一行：把 `'把你的 sk- 开头的 Key 粘到这里'` 换成你的 DeepSeek Key
-     （Key 在 [platform.deepseek.com](https://platform.deepseek.com) → 左侧「API Keys」→「创建」→ 复制）
-   - 第二行：默认就是你的网站地址，**不用动**
-6. 点右上角 **「Deploy」** → 成功
+1. 打开本仓库 → **Settings** → 左侧 **Secrets and variables → Actions**
+2. 点 **「New repository secret」**
+3. Name 填：`DEEPSEEK_KEY`
+   Secret 填：你的 DeepSeek Key（[platform.deepseek.com](https://platform.deepseek.com) → API Keys → 创建复制）
+4. 点 **Add secret** → 完成 ✅
 
-> 🔒 放心：这段代码只有你的 Cloudflare 账号能看到，Key 写在里面**不会泄露**。
+之后任何访客请求点评都会自动生成，无需再手动干预。
 
-## 第 3 步：把地址发给 AI 助手（1 分钟）
+## 验证
 
-1. 回到 Worker 页面，能看到一个网址，形如：
-   `https://galaxy-ai.xxxxx.workers.dev`
-2. **把这个网址复制发给 AI 助手**——剩下的代码修改和上线由助手完成。
+随便打开一个竞赛详情 → 点「✦ 提交 AI 点评生成请求」→ 在 GitHub 上提交那个 Issue
+→ 仓库 **Actions** 标签页看到 "AI recommendation generate" 在跑（约 1 分钟）
+→ 完成后 Issue 被自动关闭并评论 ✅ → 刷新网站，AI 点评出现。
 
----
+## 管理缓存
 
-## 完成后是什么效果
+- 所有已生成的点评存在仓库文件 `ai/recommendations.json`（按画像指纹索引）
+- 想清掉某条：直接编辑该文件删除对应指纹段落并提交
+- 想全部重来：删除该文件即可（下次请求自动重建）
 
-- 任何访客打开竞赛详情，会多一个 **「✦ 生成 AI 定制点评」** 按钮
-- 点一下 → DeepSeek 结合 TA 的画像生成个性化备赛建议（约 3-6 秒）
-- **相同画像的访客直接看缓存结果**——你只为新画像组合花一次钱（约 2 分钱/次）
-- 每个访客每天限 6 次生成，防止被盗刷
-
-## 费用
+## 费用参考
 
 | 项目 | 费用 |
 |---|---|
-| Cloudflare Worker | 免费（每天 10 万次请求额度，用不完） |
-| DeepSeek | 约 **0.02 元/次**生成；相同画像命中缓存 **0 元**；月成本预计 **< 5 元** |
-
-## 不想接了？
-
-**什么都不用做**——没接入前 AI 区块在页面上自动隐藏，网站所有功能照常。
+| GitHub Actions | 免费额度内（每次生成约 1 分钟，公共仓库不限时） |
+| DeepSeek | 约 **0.02 元/次**；同画像命中缓存 **0 元**；月成本预计 **< 5 元** |

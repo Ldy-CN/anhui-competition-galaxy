@@ -1644,64 +1644,65 @@ function openPanel(it){
   renderAI(it);   // AI 定制点评区块（未配置后端时自动隐藏）
 }
 
-/* ---- AI 定制点评（DeepSeek 后端：同画像全站共享缓存，按需调用省 token） ---- */
-/* 部署 Cloudflare Worker 后，把下行 '' 填为你的 Worker 地址（如 'https://xxx.workers.dev'），详见 DEPLOY-AI.md */
-const AI_ENDPOINT = (function(){ try { return localStorage.getItem('gxy_ai_endpoint') || ''; } catch(e){ return ''; } })();
+/* ---- AI 定制点评（GitHub 原生管线）：访客请求 → Issue → Actions 调 DeepSeek → 静态数据入库 → 全站共享。
+      无外部后端、无可达性问题、Key 只存仓库 Secrets；同画像所有访客直接复用（省 token） ---- */
+const AI_REPO_ISSUE = 'https://github.com/Ldy-CN/anhui-competition-galaxy/issues/new';
 
-function aiFpLocal(){   // 页面侧画像指纹（仅用于 sessionStorage 复用，真正的缓存判定在后端）
+async function aiFp(){   // 画像指纹：页面端与生成脚本同算法（SHA-256 前 20 位），静态库按此索引
   const p = profile || {};
-  return [p.major,p.sub,p.grade,p.school,[...(p.skills||[])].sort().join(','),[...(p.interests||[])].sort().join(','),[...(p.goals||[])].sort().join(',')].join('|');
+  const src = [p.major,p.sub,p.grade,p.school,
+    [...(p.skills||[])].sort().join(','),[...(p.interests||[])].sort().join(','),[...(p.goals||[])].sort().join(',')].join('|');
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(src));
+  return [...new Uint8Array(buf)].map(b=>b.toString(16).padStart(2,'0')).join('').slice(0,20);
 }
-function aiCacheKey(){ return 'gxy_ai_' + (aiFpLocal().length % 7) + aiFpLocal().split('').reduce((a,c)=>(a*31+c.charCodeAt(0))>>>0,7).toString(36); }
-function renderAI(it){
+let aiDbPromise = null;
+function aiDb(){
+  if (!aiDbPromise) aiDbPromise = fetch('ai/recommendations.json?ts=' + Date.now())
+    .then(r => r.ok ? r.json() : {}).catch(() => ({}));
+  return aiDbPromise;
+}
+function aiRenderDb(d, it){
+  const pick = (d.picks||[]).find(p => p.name === it.name) || (d.picks||[]).find(p => it.name.indexOf(p.name.slice(0,8)) >= 0 || p.name.indexOf(it.name.slice(0,8)) >= 0);
+  const avoid = (d.avoid||[]).find(a => a.name === it.name || it.name.indexOf(a.name.slice(0,8)) >= 0);
+  const others = (d.picks||[]).filter(p => p !== pick);
+  return '<div class="aiHead">✨ AI 定制点评</div>' +
+    '<div class="aiSummary">' + d.summary + '</div>' +
+    (pick ? '<div class="aiPick"><b>针对本项：</b>' + pick.reason + '</div>' : '') +
+    (avoid ? '<div class="aiAvoid">⚠ ' + avoid.reason + '</div>' : '') +
+    (others.length ? '<details class="aiMore"><summary>AI 推荐的其他竞赛（' + others.length + '）</summary>' +
+      others.map(p => '<div class="aiRow"><b>' + p.name + '</b>' + p.reason + '</div>').join('') + '</details>' : '') +
+    '<div class="aiFoot">由 DeepSeek 生成 · 同画像访客共享 · 仅供参考</div>';
+}
+async function renderAI(it){
   const zone = document.getElementById('aiZone');
   if (!zone) return;
-  if (!AI_ENDPOINT){ zone.style.display = 'none'; return; }
   zone.style.display = 'block';
   try {
-    const d = JSON.parse(sessionStorage.getItem(aiCacheKey()) || 'null');
-    if (d && d.picks){
-      const pick = d.picks.find(p => p.name === it.name) || d.picks.find(p => it.name.indexOf(p.name.slice(0,8)) >= 0 || p.name.indexOf(it.name.slice(0,8)) >= 0);
-      const avoid = (d.avoid||[]).find(a => a.name === it.name || it.name.indexOf(a.name.slice(0,8)) >= 0);
-      const others = d.picks.filter(p => p !== pick);
-      zone.innerHTML =
-        '<div class="aiHead">✨ AI 定制点评' + (d.cached ? '<span class="aiCached">缓存 · 零消耗</span>' : '') + '</div>' +
-        '<div class="aiSummary">' + d.summary + '</div>' +
-        (pick ? '<div class="aiPick"><b>针对本项：</b>' + pick.reason + '</div>' : '') +
-        (avoid ? '<div class="aiAvoid">⚠ ' + avoid.reason + '</div>' : '') +
-        (others.length ? '<details class="aiMore"><summary>AI 推荐的其他竞赛（' + others.length + '）</summary>' +
-          others.map(p => '<div class="aiRow"><b>' + p.name + '</b>' + p.reason + '</div>').join('') + '</details>' : '') +
-        '<div class="aiFoot">由 DeepSeek 生成 · 同画像访客共享缓存 · 仅供参考</div>';
-      return;
-    }
+    const fp = await aiFp();
+    const db = await aiDb();
+    if (db[fp]){ zone.innerHTML = aiRenderDb(db[fp], it); return; }
   } catch(e){}
-  zone.innerHTML = '<button id="aiGen" class="aiBtn">✦ 生成 AI 定制点评（约 3-6 秒 · 同画像结果全站共享）</button>';
-  const btn = document.getElementById('aiGen');
-  if (btn) btn.onclick = () => generateAI(it);
+  /* 该画像还没有 AI 点评 → 引导提交生成请求（GitHub Issue 预填画像，提交后 Actions 自动生成） */
+  zone.innerHTML = '<div class="aiHead">✨ AI 定制点评</div>' +
+    '<div class="aiWait">你的画像组合还没有 AI 深度点评。点下面按钮提交生成请求（跳转 GitHub 并已预填好内容，直接提交即可），' +
+    '<b>约 2-3 分钟后自动生成上线</b>，届时刷新本页即可看到。同画像的同学也能直接看到，不会重复消耗。</div>' +
+    '<button id="aiReq" class="aiBtn">✦ 提交 AI 点评生成请求</button>';
+  const btn = document.getElementById('aiReq');
+  if (btn) btn.onclick = () => requestAI(it);
 }
-async function generateAI(it){
+function requestAI(it){
+  const p = profile || {};
+  const body = '```json\n' + JSON.stringify({
+    profile: { major:p.major||'', sub:p.sub||'', grade:p.grade||'', school:p.school||'',
+      skills:p.skills||[], interests:p.interests||[], goals:p.goals||[] },
+    competitions: items.map(i => ({ n:i.name, c:catName(i.cat) })),
+  }) + '\n```';
+  window.open(AI_REPO_ISSUE + '?title=' + encodeURIComponent('[AI点评请求] 画像指纹见内容') +
+    '&body=' + encodeURIComponent(body), '_blank');
   const zone = document.getElementById('aiZone');
-  zone.innerHTML = '<div class="aiLoading">✦ AI 正在结合你的画像分析 ' + items.length + ' 项竞赛…</div>';
-  try {
-    const competitions = items.map(i => ({
-      n: i.name, c: catName(i.cat),
-      s: (function(){ try { return windowText(i).txt; } catch(e){ return ''; } })(),
-      w: i.when || '', t: (i.why || '').slice(0, 60),
-    }));
-    const res = await fetch(AI_ENDPOINT + '/api/recommend', {
-      method: 'POST', headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({ profile: {
-        major: profile.major, sub: profile.sub, grade: profile.grade, school: profile.school,
-        skills: profile.skills || [], interests: profile.interests || [], goals: profile.goals || [],
-      }, competitions }),
-    });
-    const j = await res.json();
-    if (!res.ok) throw new Error(j.error || ('HTTP ' + res.status));
-    sessionStorage.setItem(aiCacheKey(), JSON.stringify(j.data));
-    renderAI(it);
-  } catch(e){
-    zone.innerHTML = '<div class="aiErr">AI 点评暂不可用：' + String(e.message || e).slice(0, 100) + '</div>';
-  }
+  if (zone) zone.innerHTML = '<div class="aiHead">✨ AI 定制点评</div>' +
+    '<div class="aiWait">已为你打开 GitHub 提交页——<b>直接点绿色的「Create」提交</b>即可。' +
+    '系统将在约 2-3 分钟内自动生成并上线，之后<b>刷新本页</b>就能看到你的专属点评。</div>';
 }
 function closePanel(){ panel.classList.remove('open'); window.__selectedItem=null; }
 document.getElementById('pClose').onclick = closePanel;

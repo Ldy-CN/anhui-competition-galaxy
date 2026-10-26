@@ -1,0 +1,38 @@
+name: AI recommendation generate
+
+on:
+  issues:
+    types: [opened]
+
+permissions:
+  contents: write
+  issues: write
+
+concurrency:
+  group: ai-generate
+  cancel-in-progress: false
+
+jobs:
+  generate:
+    if: startsWith(github.event.issue.title, '[AI点评请求]')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Generate AI recommendation
+        env:
+          DEEPSEEK_KEY: ${{ secrets.DEEPSEEK_KEY }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          ISSUE_BODY: ${{ github.event.issue.body }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: node scripts/generate-ai-recs.mjs
+      - name: Commit recommendation
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add ai/recommendations.json
+          git diff --cached --quiet || git commit -m "chore(ai): 新增画像点评 ${{ github.event.issue.number }}"
+          git push
