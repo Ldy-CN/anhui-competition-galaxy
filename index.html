@@ -155,23 +155,6 @@
     padding:11px 13px;font-size:12.5px;line-height:1.8;color:#c9d4f5;margin-top:4px}
   .why b{color:var(--gold)}
   /* AI 定制点评区块 */
-  .aiZone{margin-top:12px;border:1px solid rgba(91,124,255,.35);border-radius:12px;
-    background:linear-gradient(135deg,rgba(91,124,255,.10),rgba(147,112,219,.08));padding:12px 14px}
-  .aiHead{font-size:13px;font-weight:bold;color:#c9d4ff;margin-bottom:7px}
-  .aiCached{font-size:10px;color:#7ee0a8;background:rgba(126,224,168,.12);border-radius:8px;padding:2px 8px;margin-left:8px;font-weight:normal}
-  .aiSummary{font-size:12.5px;line-height:1.8;color:#dfe6ff;padding-bottom:8px;border-bottom:1px dashed rgba(91,124,255,.3);margin-bottom:8px}
-  .aiPick{font-size:12px;line-height:1.75;color:#e8edff;background:rgba(91,124,255,.12);border-radius:8px;padding:8px 11px;margin-bottom:6px}
-  .aiAvoid{font-size:11.5px;line-height:1.7;color:#f0b96b;background:rgba(240,185,107,.08);border-radius:8px;padding:6px 11px;margin-bottom:6px}
-  .aiMore{font-size:11.5px;color:var(--sub);margin-top:4px}
-  .aiMore summary{cursor:pointer;color:#9fb0d8}
-  .aiRow{padding:6px 0;border-bottom:1px dashed rgba(91,124,255,.2);line-height:1.7}
-  .aiRow b{display:block;color:#c9d4ff;margin-bottom:2px}
-  .aiFoot{font-size:9.5px;color:rgba(154,167,199,.6);margin-top:8px}
-  .aiBtn{width:100%;padding:10px;border-radius:10px;border:1px solid rgba(91,124,255,.5);
-    background:rgba(91,124,255,.18);color:#c9d4ff;font-size:12.5px;cursor:pointer;transition:background .2s}
-  .aiBtn:hover{background:rgba(91,124,255,.32)}
-  .aiLoading{font-size:12px;color:#9fb0d8;text-align:center;padding:10px 0}
-  .aiErr{font-size:11.5px;color:#f0b96b;line-height:1.7}
   .noteTag{display:inline-block;font-size:11px;padding:2px 9px;border-radius:10px;margin:2px 4px 2px 0;
     background:rgba(255,209,102,.12);border:1px solid rgba(255,209,102,.35);color:var(--gold)}
   .siteBtn{display:inline-flex;align-items:center;gap:6px;margin-top:4px;padding:8px 16px;border-radius:20px;
@@ -212,8 +195,6 @@
   #viewSwitch div{padding:7px 16px;font-size:12px;cursor:pointer;color:var(--sub);transition:all .18s;user-select:none}
   #viewSwitch div.on{background:#3b6cff;color:#fff}
 
-  #hint{position:absolute;left:50%;transform:translateX(-50%);bottom:18px;z-index:16;font-size:11px;
-    color:rgba(154,167,199,.65);pointer-events:none;letter-spacing:1px}
   #aiBar{position:absolute;left:50%;transform:translateX(-50%);bottom:40px;z-index:16;max-width:calc(100vw - 60px);
     font-size:10.5px;color:rgba(200,150,90,.85);background:rgba(60,40,10,.55);border:1px solid rgba(200,150,90,.3);
     border-radius:14px;padding:5px 14px;text-align:center;line-height:1.6}
@@ -255,7 +236,6 @@
     .scoreLabel{font-size:11px}
     #liveBar{left:10px;right:10px;bottom:52px;max-width:calc(100vw - 20px)}
     .liveTitle{font-size:11px}
-    #hint{font-size:10px;bottom:6px;max-width:calc(100vw - 24px);text-align:center}
     /* 声明条贴底全宽（Pad 端此前被左下横幅遮挡不可见），横幅上移至其上方 */
     #aiBar{bottom:10px;left:10px;right:10px;transform:none;max-width:calc(100vw - 20px);font-size:10px;padding:5px 10px;z-index:17}
     #panel{width:100vw;right:-100vw} #panel.open{right:0}
@@ -443,11 +423,6 @@
   <div id="legendCats"></div>
 </div>
 
-<div id="hint">拖拽旋转 · 滚轮指哪缩哪（SolidWorks 式焦点缩放） · 近处卡片自动变淡 · 点击卡片查看详情</div>
-<script>
-/* 触屏设备替换操作提示（无滚轮/悬停概念） */
-if (window.IS_MOBILE) document.getElementById('hint').textContent = '单指拖动旋转 · 双指缩放 · 点按卡片查看详情';
-</script>
 
 <div id="aiBar">⚠ 本站全部内容由 AI 依据各赛事官网公开通知整理生成，仅供参考 · 报名信息请以官网最新通知为准 · <span id="aiMore">查看完整声明</span> · <span id="fbOpen">💬 反馈纠错</span><span id="visitStat" style="display:none"> · 👁 本站累计访问 <b id="busuanzi_value_site_pv" style="color:#7ee0a8">…</b> 次</span></div>
 
@@ -1634,76 +1609,14 @@ function openPanel(it){
     <div class="kv"><div class="k">组队 要求</div><div class="v">${it.team}</div></div>
     ${notes?`<div class="kv"><div class="k">定制 亮点</div><div class="v">${notes}</div></div>`:''}
     <div class="kv"><div class="k">推荐 理由（针对你的画像）</div><div class="why">${it.why}</div></div>
-    <div id="aiZone" class="aiZone"></div>
     <div style="font-size:10.5px;color:rgba(154,167,199,.75);margin-top:14px;line-height:1.7;border-top:1px dashed var(--line);padding-top:9px">
       ℹ 本条目内容由 AI 依据该赛事官网公开通知整理（检索于 2026-10-23），仅供参考；报名与赛制细节请前往官网核对最新通知。
       <a class="fixlink" target="_blank" rel="noopener" href="https://github.com/Ldy-CN/anhui-competition-galaxy/issues/new?title=%5B%E4%BF%A1%E6%81%AF%E7%BA%A0%E9%94%99%5D%20${encodeURIComponent(it.name)}&body=%E7%AB%9E%E8%B5%9B%E5%90%8D%E7%A7%B0%EF%BC%9A${encodeURIComponent(it.name)}%0A%E9%94%99%E8%AF%AF%E5%86%85%E5%AE%B9%EF%BC%9A%0A%E6%AD%A3%E7%A1%AE%E4%BF%A1%E6%81%AF%EF%BC%88%E9%99%84%E5%AE%98%E7%BD%91%E9%93%BE%E6%8E%A5%EF%BC%89%EF%BC%9A">纠错此条目</a>
     </div>
   `;
   panel.classList.add('open');
-  renderAI(it);   // AI 定制点评区块（未配置后端时自动隐藏）
 }
 
-/* ---- AI 定制点评（GitHub 原生管线）：访客请求 → Issue → Actions 调 DeepSeek → 静态数据入库 → 全站共享。
-      无外部后端、无可达性问题、Key 只存仓库 Secrets；同画像所有访客直接复用（省 token） ---- */
-const AI_REPO_ISSUE = 'https://github.com/Ldy-CN/anhui-competition-galaxy/issues/new';
-
-async function aiFp(){   // 画像指纹：页面端与生成脚本同算法（SHA-256 前 20 位），静态库按此索引
-  const p = profile || {};
-  const src = [p.major,p.sub,p.grade,p.school,
-    [...(p.skills||[])].sort().join(','),[...(p.interests||[])].sort().join(','),[...(p.goals||[])].sort().join(',')].join('|');
-  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(src));
-  return [...new Uint8Array(buf)].map(b=>b.toString(16).padStart(2,'0')).join('').slice(0,20);
-}
-let aiDbPromise = null;
-function aiDb(){
-  if (!aiDbPromise) aiDbPromise = fetch('ai/recommendations.json?ts=' + Date.now())
-    .then(r => r.ok ? r.json() : {}).catch(() => ({}));
-  return aiDbPromise;
-}
-function aiRenderDb(d, it){
-  const pick = (d.picks||[]).find(p => p.name === it.name) || (d.picks||[]).find(p => it.name.indexOf(p.name.slice(0,8)) >= 0 || p.name.indexOf(it.name.slice(0,8)) >= 0);
-  const avoid = (d.avoid||[]).find(a => a.name === it.name || it.name.indexOf(a.name.slice(0,8)) >= 0);
-  const others = (d.picks||[]).filter(p => p !== pick);
-  return '<div class="aiHead">✨ AI 定制点评</div>' +
-    '<div class="aiSummary">' + d.summary + '</div>' +
-    (pick ? '<div class="aiPick"><b>针对本项：</b>' + pick.reason + '</div>' : '') +
-    (avoid ? '<div class="aiAvoid">⚠ ' + avoid.reason + '</div>' : '') +
-    (others.length ? '<details class="aiMore"><summary>AI 推荐的其他竞赛（' + others.length + '）</summary>' +
-      others.map(p => '<div class="aiRow"><b>' + p.name + '</b>' + p.reason + '</div>').join('') + '</details>' : '') +
-    '<div class="aiFoot">由 DeepSeek 生成 · 同画像访客共享 · 仅供参考</div>';
-}
-async function renderAI(it){
-  const zone = document.getElementById('aiZone');
-  if (!zone) return;
-  zone.style.display = 'block';
-  try {
-    const fp = await aiFp();
-    const db = await aiDb();
-    if (db[fp]){ zone.innerHTML = aiRenderDb(db[fp], it); return; }
-  } catch(e){}
-  /* 该画像还没有 AI 点评 → 引导提交生成请求（GitHub Issue 预填画像，提交后 Actions 自动生成） */
-  zone.innerHTML = '<div class="aiHead">✨ AI 定制点评</div>' +
-    '<div class="aiWait">你的画像组合还没有 AI 深度点评。点下面按钮提交生成请求（跳转 GitHub 并已预填好内容，直接提交即可），' +
-    '<b>约 2-3 分钟后自动生成上线</b>，届时刷新本页即可看到。同画像的同学也能直接看到，不会重复消耗。</div>' +
-    '<button id="aiReq" class="aiBtn">✦ 提交 AI 点评生成请求</button>';
-  const btn = document.getElementById('aiReq');
-  if (btn) btn.onclick = () => requestAI(it);
-}
-function requestAI(it){
-  const p = profile || {};
-  const body = '```json\n' + JSON.stringify({
-    profile: { major:p.major||'', sub:p.sub||'', grade:p.grade||'', school:p.school||'',
-      skills:p.skills||[], interests:p.interests||[], goals:p.goals||[] },
-    competitions: items.map(i => ({ n:i.name, c:catName(i.cat) })),
-  }) + '\n```';
-  window.open(AI_REPO_ISSUE + '?title=' + encodeURIComponent('[AI点评请求] 画像指纹见内容') +
-    '&body=' + encodeURIComponent(body), '_blank');
-  const zone = document.getElementById('aiZone');
-  if (zone) zone.innerHTML = '<div class="aiHead">✨ AI 定制点评</div>' +
-    '<div class="aiWait">已为你打开 GitHub 提交页——<b>直接点绿色的「Create」提交</b>即可。' +
-    '系统将在约 2-3 分钟内自动生成并上线，之后<b>刷新本页</b>就能看到你的专属点评。</div>';
-}
 function closePanel(){ panel.classList.remove('open'); window.__selectedItem=null; }
 document.getElementById('pClose').onclick = closePanel;
 
