@@ -2,7 +2,7 @@ name: Check competition website updates
 
 on:
   schedule:
-    - cron: '0 1 * * *'   # 每天 UTC 01:00（北京时间 09:00）；改频率改这里，如每三天 '0 1 * * */3'
+    - cron: '0 1 * * 1'   # 每周一 UTC 01:00（北京时间周一 09:00）——每周检测一次官网更新
   workflow_dispatch:
 
 permissions:

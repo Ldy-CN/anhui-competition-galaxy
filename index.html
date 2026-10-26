@@ -154,6 +154,24 @@
   .why{background:rgba(91,124,255,.08);border:1px solid rgba(91,124,255,.22);border-radius:10px;
     padding:11px 13px;font-size:12.5px;line-height:1.8;color:#c9d4f5;margin-top:4px}
   .why b{color:var(--gold)}
+  /* AI 定制点评区块 */
+  .aiZone{margin-top:12px;border:1px solid rgba(91,124,255,.35);border-radius:12px;
+    background:linear-gradient(135deg,rgba(91,124,255,.10),rgba(147,112,219,.08));padding:12px 14px}
+  .aiHead{font-size:13px;font-weight:bold;color:#c9d4ff;margin-bottom:7px}
+  .aiCached{font-size:10px;color:#7ee0a8;background:rgba(126,224,168,.12);border-radius:8px;padding:2px 8px;margin-left:8px;font-weight:normal}
+  .aiSummary{font-size:12.5px;line-height:1.8;color:#dfe6ff;padding-bottom:8px;border-bottom:1px dashed rgba(91,124,255,.3);margin-bottom:8px}
+  .aiPick{font-size:12px;line-height:1.75;color:#e8edff;background:rgba(91,124,255,.12);border-radius:8px;padding:8px 11px;margin-bottom:6px}
+  .aiAvoid{font-size:11.5px;line-height:1.7;color:#f0b96b;background:rgba(240,185,107,.08);border-radius:8px;padding:6px 11px;margin-bottom:6px}
+  .aiMore{font-size:11.5px;color:var(--sub);margin-top:4px}
+  .aiMore summary{cursor:pointer;color:#9fb0d8}
+  .aiRow{padding:6px 0;border-bottom:1px dashed rgba(91,124,255,.2);line-height:1.7}
+  .aiRow b{display:block;color:#c9d4ff;margin-bottom:2px}
+  .aiFoot{font-size:9.5px;color:rgba(154,167,199,.6);margin-top:8px}
+  .aiBtn{width:100%;padding:10px;border-radius:10px;border:1px solid rgba(91,124,255,.5);
+    background:rgba(91,124,255,.18);color:#c9d4ff;font-size:12.5px;cursor:pointer;transition:background .2s}
+  .aiBtn:hover{background:rgba(91,124,255,.32)}
+  .aiLoading{font-size:12px;color:#9fb0d8;text-align:center;padding:10px 0}
+  .aiErr{font-size:11.5px;color:#f0b96b;line-height:1.7}
   .noteTag{display:inline-block;font-size:11px;padding:2px 9px;border-radius:10px;margin:2px 4px 2px 0;
     background:rgba(255,209,102,.12);border:1px solid rgba(255,209,102,.35);color:var(--gold)}
   .siteBtn{display:inline-flex;align-items:center;gap:6px;margin-top:4px;padding:8px 16px;border-radius:20px;
@@ -1616,12 +1634,74 @@ function openPanel(it){
     <div class="kv"><div class="k">组队 要求</div><div class="v">${it.team}</div></div>
     ${notes?`<div class="kv"><div class="k">定制 亮点</div><div class="v">${notes}</div></div>`:''}
     <div class="kv"><div class="k">推荐 理由（针对你的画像）</div><div class="why">${it.why}</div></div>
+    <div id="aiZone" class="aiZone"></div>
     <div style="font-size:10.5px;color:rgba(154,167,199,.75);margin-top:14px;line-height:1.7;border-top:1px dashed var(--line);padding-top:9px">
       ℹ 本条目内容由 AI 依据该赛事官网公开通知整理（检索于 2026-10-23），仅供参考；报名与赛制细节请前往官网核对最新通知。
       <a class="fixlink" target="_blank" rel="noopener" href="https://github.com/Ldy-CN/anhui-competition-galaxy/issues/new?title=%5B%E4%BF%A1%E6%81%AF%E7%BA%A0%E9%94%99%5D%20${encodeURIComponent(it.name)}&body=%E7%AB%9E%E8%B5%9B%E5%90%8D%E7%A7%B0%EF%BC%9A${encodeURIComponent(it.name)}%0A%E9%94%99%E8%AF%AF%E5%86%85%E5%AE%B9%EF%BC%9A%0A%E6%AD%A3%E7%A1%AE%E4%BF%A1%E6%81%AF%EF%BC%88%E9%99%84%E5%AE%98%E7%BD%91%E9%93%BE%E6%8E%A5%EF%BC%89%EF%BC%9A">纠错此条目</a>
     </div>
   `;
   panel.classList.add('open');
+  renderAI(it);   // AI 定制点评区块（未配置后端时自动隐藏）
+}
+
+/* ---- AI 定制点评（DeepSeek 后端：同画像全站共享缓存，按需调用省 token） ---- */
+/* 部署 Cloudflare Worker 后，把下行 '' 填为你的 Worker 地址（如 'https://xxx.workers.dev'），详见 DEPLOY-AI.md */
+const AI_ENDPOINT = (function(){ try { return localStorage.getItem('gxy_ai_endpoint') || ''; } catch(e){ return ''; } })();
+
+function aiFpLocal(){   // 页面侧画像指纹（仅用于 sessionStorage 复用，真正的缓存判定在后端）
+  const p = profile || {};
+  return [p.major,p.sub,p.grade,p.school,[...(p.skills||[])].sort().join(','),[...(p.interests||[])].sort().join(','),[...(p.goals||[])].sort().join(',')].join('|');
+}
+function aiCacheKey(){ return 'gxy_ai_' + (aiFpLocal().length % 7) + aiFpLocal().split('').reduce((a,c)=>(a*31+c.charCodeAt(0))>>>0,7).toString(36); }
+function renderAI(it){
+  const zone = document.getElementById('aiZone');
+  if (!zone) return;
+  if (!AI_ENDPOINT){ zone.style.display = 'none'; return; }
+  zone.style.display = 'block';
+  try {
+    const d = JSON.parse(sessionStorage.getItem(aiCacheKey()) || 'null');
+    if (d && d.picks){
+      const pick = d.picks.find(p => p.name === it.name) || d.picks.find(p => it.name.indexOf(p.name.slice(0,8)) >= 0 || p.name.indexOf(it.name.slice(0,8)) >= 0);
+      const avoid = (d.avoid||[]).find(a => a.name === it.name || it.name.indexOf(a.name.slice(0,8)) >= 0);
+      const others = d.picks.filter(p => p !== pick);
+      zone.innerHTML =
+        '<div class="aiHead">✨ AI 定制点评' + (d.cached ? '<span class="aiCached">缓存 · 零消耗</span>' : '') + '</div>' +
+        '<div class="aiSummary">' + d.summary + '</div>' +
+        (pick ? '<div class="aiPick"><b>针对本项：</b>' + pick.reason + '</div>' : '') +
+        (avoid ? '<div class="aiAvoid">⚠ ' + avoid.reason + '</div>' : '') +
+        (others.length ? '<details class="aiMore"><summary>AI 推荐的其他竞赛（' + others.length + '）</summary>' +
+          others.map(p => '<div class="aiRow"><b>' + p.name + '</b>' + p.reason + '</div>').join('') + '</details>' : '') +
+        '<div class="aiFoot">由 DeepSeek 生成 · 同画像访客共享缓存 · 仅供参考</div>';
+      return;
+    }
+  } catch(e){}
+  zone.innerHTML = '<button id="aiGen" class="aiBtn">✦ 生成 AI 定制点评（约 3-6 秒 · 同画像结果全站共享）</button>';
+  const btn = document.getElementById('aiGen');
+  if (btn) btn.onclick = () => generateAI(it);
+}
+async function generateAI(it){
+  const zone = document.getElementById('aiZone');
+  zone.innerHTML = '<div class="aiLoading">✦ AI 正在结合你的画像分析 ' + items.length + ' 项竞赛…</div>';
+  try {
+    const competitions = items.map(i => ({
+      n: i.name, c: catName(i.cat),
+      s: (function(){ try { return windowText(i).txt; } catch(e){ return ''; } })(),
+      w: i.when || '', t: (i.why || '').slice(0, 60),
+    }));
+    const res = await fetch(AI_ENDPOINT + '/api/recommend', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ profile: {
+        major: profile.major, sub: profile.sub, grade: profile.grade, school: profile.school,
+        skills: profile.skills || [], interests: profile.interests || [], goals: profile.goals || [],
+      }, competitions }),
+    });
+    const j = await res.json();
+    if (!res.ok) throw new Error(j.error || ('HTTP ' + res.status));
+    sessionStorage.setItem(aiCacheKey(), JSON.stringify(j.data));
+    renderAI(it);
+  } catch(e){
+    zone.innerHTML = '<div class="aiErr">AI 点评暂不可用：' + String(e.message || e).slice(0, 100) + '</div>';
+  }
 }
 function closePanel(){ panel.classList.remove('open'); window.__selectedItem=null; }
 document.getElementById('pClose').onclick = closePanel;
