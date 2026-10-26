@@ -473,6 +473,7 @@
     <button class="close" id="pfClose">✕</button>
     <div style="font-size:17px;font-weight:bold">⚙ 我的画像</div>
     <div style="font-size:11.5px;color:var(--sub);margin-top:4px;line-height:1.6">填得越全，推荐分越准。画像只保存在本机浏览器，不会上传。</div>
+    <div id="pfDone" style="font-size:11px;margin-top:6px;color:#7ee0a8"></div>
   </div>
   <div class="pb">
     <div class="kv"><div class="k">专业 大类</div><select id="pfMajor" class="pfsel"></select></div>
@@ -654,6 +655,12 @@ const INTEREST_POOL = [
   { k:'foreign',  label:'外语',                cats:['arts'] },
   { k:'structure',label:'结构/建筑',           cats:['basic'] },
   { k:'chip',     label:'电子设计/芯片',       cats:['elec'] },
+  { k:'digitaltwin', label:'数字孪生/仿真分析', cats:['smart','mech'] },
+  { k:'vehicle',  label:'车辆/智能驾驶',       cats:['mech','smart'] },
+  { k:'aero',     label:'航空航天',            cats:['mech','basic'] },
+  { k:'iot',      label:'物联网/工业互联网',   cats:['elec','smart'] },
+  { k:'meddevice',label:'医疗器械',            cats:['elec','basic'] },
+  { k:'agritech', label:'智慧农业/农机',       cats:['mech','smart'] },
 ];
 
 const SCHOOL_LABELS = { top:'985/211/双一流', yb:'普通一本', eb:'普通二本', zk:'专科' };
@@ -667,13 +674,14 @@ let profile = (() => {
     o.sub = o.sub || ''; o.interests = o.interests || [];
     return o;
   } } } catch(e){}
-  return { major:'other', sub:'', grade:2, school:'eb', skills:[], interests:[], goals:[] };
+  return { major:'', sub:'', grade:'', school:'', skills:[], interests:[], goals:[] };   // 默认全空：未选择的维度按中性分处理
 })();
 
 /* 赛道级适配度：技能命中率 + 专业微调 → strong/mid/low/no 四档 */
 function trackFit(tr, it, pf){
   if (tr.vet) return { sc:-1, tag:'no' };
   const needs = tr.s || [];
+  if (!(pf.skills||[]).length) return { sc:0.5, tag:'mid' };   // 未填技能：中性
   const hits = needs.filter(x => (pf.skills||[]).indexOf(x) >= 0).length;
   let sc = needs.length ? hits/needs.length : 0.5;
   const mRow = majorRowOf(pf);
@@ -687,10 +695,11 @@ function computeScoreDetail(it, pf){
   const mRow = majorRowOf(pf);
   parts.major = (mRow[it.cat] != null) ? mRow[it.cat] : 20;
   const needs = it.skills || [];
+  const hasSkills = (pf.skills||[]).length > 0;
   const hits = needs.filter(x => (pf.skills||[]).indexOf(x) >= 0).length;
-  parts.skill = needs.length ? Math.round(5 + 20*hits/needs.length) : 13;
+  parts.skill = (needs.length && hasSkills) ? Math.round(5 + 20*hits/needs.length) : 13;   // 未填技能：中性 13 不奖不罚
   const by = it.bestYear || [1,2,3,4];
-  parts.year = by.includes(pf.grade) ? 10 : (Math.min.apply(null, by.map(y=>Math.abs(y-pf.grade)))===1 ? 6 : 2);
+  parts.year = pf.grade === '' || pf.grade == null ? 6 : (by.includes(pf.grade) ? 10 : (Math.min.apply(null, by.map(y=>Math.abs(y-pf.grade)))===1 ? 6 : 2));   // 未填年级：中性 6
   const sb = {top:4.5, yb:3.6, eb:3.0, zk:2.6}[pf.school] || 3;
   parts.reach = Math.max(0, Math.round(15 - Math.abs((it.intensity||3) - sb)*3.5));
   let cover = 0;
@@ -698,8 +707,8 @@ function computeScoreDetail(it, pf){
     const tag = INTEREST_POOL.find(x => x.k === k);
     if (tag && tag.cats.indexOf(it.cat) >= 0) cover++;
   });
-  parts.interest = Math.min(10, cover*5);
-  parts.goal = ((pf.goals||[]).some(g => (it.goal||[]).indexOf(g) >= 0)) ? 5 : 0;
+  parts.interest = (pf.interests||[]).length ? Math.min(10, cover*5) : 5;   // 未填兴趣：中性 5
+  parts.goal = !(pf.goals||[]).length ? 2.5 : (((pf.goals||[]).some(g => (it.goal||[]).indexOf(g) >= 0)) ? 5 : 0);   // 未填目标：中性 2.5
   parts.track = 0;
   if (it.tracks && it.tracks.length){
     const best = Math.max.apply(null, it.tracks.map(tr => trackFit(tr, it, pf).sc));
@@ -1760,11 +1769,13 @@ document.getElementById('legendCats').innerHTML = CATS.map(c=>
   Object.keys(MAJOR_LABELS).forEach(k=>{
     const o = document.createElement('option'); o.value = k; o.textContent = MAJOR_LABELS[k]; mSel.appendChild(o);
   });
+  const blank = document.createElement('option'); blank.value=''; blank.textContent='（未选择）'; mSel.insertBefore(blank, mSel.firstChild);
   const subSel = document.getElementById('pfSub');
   const sSel = document.getElementById('pfSchool');
   Object.keys(SCHOOL_LABELS).forEach(k=>{
     const o = document.createElement('option'); o.value = k; o.textContent = SCHOOL_LABELS[k]; sSel.appendChild(o);
   });
+  const blankS = document.createElement('option'); blankS.value=''; blankS.textContent='（未选择）'; sSel.insertBefore(blankS, sSel.firstChild);
   function fillSubs(){
     subSel.innerHTML = '';
     const grp = MAJORS[mSel.value];
@@ -1814,6 +1825,12 @@ document.getElementById('legendCats').innerHTML = CATS.map(c=>
     mSel.value = profile.major; fillSubs(); subSel.value = profile.sub || '';
     if (!subSel.value && subSel.options.length) subSel.selectedIndex = 0;
     sSel.value = profile.school;
+    /* 完成度提示：7 个维度中已填几项 */
+    const done = ['major','grade','school'].filter(k => profile[k] !== '' && profile[k] != null).length
+      + ((profile.skills||[]).length ? 1 : 0) + ((profile.interests||[]).length ? 1 : 0) + ((profile.goals||[]).length ? 1 : 0)
+      + (profile.sub ? 1 : 0);
+    const doneEl = document.getElementById('pfDone');
+    if (doneEl) doneEl.textContent = done >= 7 ? '✅ 画像已完整，推荐分最准' : '已填 ' + done + '/7 项 · 填得越全推荐越准';
     gRow.querySelectorAll('.pchip').forEach(x=>x.classList.toggle('on', +x.dataset.g === profile.grade));
     sRow.querySelectorAll('.pchip').forEach(x=>x.classList.toggle('on', (profile.skills||[]).indexOf(x.dataset.s) >= 0));
     iRow.querySelectorAll('.pchip').forEach(x=>{
@@ -1832,12 +1849,12 @@ document.getElementById('legendCats').innerHTML = CATS.map(c=>
     const interests = Array.prototype.map.call(iRow.querySelectorAll('.pchip.on'), x=>x.dataset.i);
     const goals = Array.prototype.map.call(g2Row.querySelectorAll('.pchip.on'), x=>x.dataset.g2);
     const g = gRow.querySelector('.pchip.on');
-    applyProfile({ major: mSel.value, sub: subSel.disabled ? '' : subSel.value, grade: g ? +g.dataset.g : 2,
+    applyProfile({ major: mSel.value, sub: subSel.disabled ? '' : subSel.value, grade: g ? +g.dataset.g : '',
                    school: sSel.value, skills: skills, interests: interests, goals: goals });
     box.classList.remove('open');
   };
   document.getElementById('pfReset').onclick = ()=>{
-    applyProfile({ major:'other', sub:'', grade:2, school:'eb', skills:[], interests:[], goals:[] });
+    applyProfile({ major:'', sub:'', grade:'', school:'', skills:[], interests:[], goals:[] });   // 重置 = 全部未选
     syncUI();
   };
 })();
