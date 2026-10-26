@@ -1,67 +1,52 @@
-# ✨ AI 定制点评 · 部署指南（DeepSeek 后端）
+# ✨ AI 点评接入：三步搞定（跟着点就行）
 
-> 目标：访客点「生成 AI 定制点评」→ 后端查缓存 → 未命中才调 DeepSeek → **结果固化共享**。
-> 成本：**同画像访客只有第一次花约 0.02 元**，之后全部命中缓存零消耗。学生月成本预计 < 5 元。
+> 全程免费，约 10 分钟。**卡在任何一步，截图发给 AI 助手即可。**
 
-## 架构
+---
 
-```
-访客浏览器 ──画像+精简竞赛数据──▶ Cloudflare Worker（免费后端）
-                                    ├─ 命中 KV 缓存 ──▶ 直接返回（0 消耗）
-                                    └─ 未命中 ──▶ 调 DeepSeek API ──▶ 结果存 KV ──▶ 返回
-```
+## 第 1 步：注册 Cloudflare（1 分钟）
 
-- **API Key 只存在 Worker 环境变量**，前端代码里没有任何密钥，访客扒不走。
-- 页面把精简竞赛数据随请求发送，Worker 无需内置数据——数据更新自动同步。
+1. 打开 [dash.cloudflare.com/sign-up](https://dash.cloudflare.com/sign-up)
+2. 输入邮箱、设密码、点邮箱里的验证链接 → 完成注册
+3. 注册后直接进入控制台，**不用添加网站域名**（会提示，跳过即可）
 
-## 部署步骤（约 15 分钟，全程免费）
+## 第 2 步：创建 AI 后端（5 分钟）
 
-### 1. Cloudflare Worker
+1. 控制台左侧点 **「Workers & Pages」**
+2. 点 **「Create」** → 选 **「Create Worker」** → 名字随便填（比如 `galaxy-ai`）→ 点 **「Deploy」**
+3. 部署成功后点 **「Edit code」**（编辑代码）
+4. 把编辑器里的代码**全部删掉**，粘贴 `worker/deepseek-worker.js` 文件的全部内容
+   （这个文件在项目文件夹 `worker/` 里，用记事本打开复制）
+5. **改文件最上面两行**：
+   - 第一行：把 `'把你的 sk- 开头的 Key 粘到这里'` 换成你的 DeepSeek Key
+     （Key 在 [platform.deepseek.com](https://platform.deepseek.com) → 左侧「API Keys」→「创建」→ 复制）
+   - 第二行：默认就是你的网站地址，**不用动**
+6. 点右上角 **「Deploy」** → 成功
 
-1. 注册/登录 [dash.cloudflare.com](https://dash.cloudflare.com)
-2. 左侧 **Workers & Pages → Create → Create Worker**，名字随意（如 `galaxy-ai`）→ Deploy
-3. 点 **Edit code**，清空默认代码，**粘贴 `worker/deepseek-worker.js` 全部内容** → Deploy
+> 🔒 放心：这段代码只有你的 Cloudflare 账号能看到，Key 写在里面**不会泄露**。
 
-### 2. 绑定 KV（缓存"数据库"）
+## 第 3 步：把地址发给 AI 助手（1 分钟）
 
-1. 左侧 **Storage & Databases → KV → Create namespace**，名字填 `AI_CACHE`
-2. 回到 Worker → **Settings → Bindings → Add → KV namespace**
-   - Variable name 填 `KV`，Namespace 选刚建的 `AI_CACHE` → Deploy
+1. 回到 Worker 页面，能看到一个网址，形如：
+   `https://galaxy-ai.xxxxx.workers.dev`
+2. **把这个网址复制发给 AI 助手**——剩下的代码修改和上线由助手完成。
 
-### 3. 配置环境变量
+---
 
-Worker → **Settings → Variables and Secrets → Add**，逐个添加：
+## 完成后是什么效果
 
-| 类型 | Variable name | 值 |
-|---|---|---|
-| **Secret**（加密） | `DEEPSEEK_KEY` | 你的 DeepSeek API Key（[platform.deepseek.com](https://platform.deepseek.com) → API Keys 创建） |
-| Text | `ALLOW_ORIGIN` | `https://ldy-cn.github.io` |
+- 任何访客打开竞赛详情，会多一个 **「✦ 生成 AI 定制点评」** 按钮
+- 点一下 → DeepSeek 结合 TA 的画像生成个性化备赛建议（约 3-6 秒）
+- **相同画像的访客直接看缓存结果**——你只为新画像组合花一次钱（约 2 分钱/次）
+- 每个访客每天限 6 次生成，防止被盗刷
 
-每次改动后 Worker 自动重新部署。
+## 费用
 
-### 4. 页面接入（改 1 行）
-
-打开 `anhui-competitions-3d.html`，搜索 `AI_ENDPOINT`，把空串改为你的 Worker 地址：
-
-```js
-const AI_ENDPOINT = 'https://galaxy-ai.你的子域名.workers.dev';
-```
-
-5. 本地 `python build.py` 重建 → 提交推送 → 手机/电脑打开网站，点任意竞赛详情里的
-   **「✦ 生成 AI 定制点评」** 验证。
-
-## 省钱机制（已内建）
-
-| 机制 | 效果 |
+| 项目 | 费用 |
 |---|---|
-| 画像指纹缓存（KV 永久） | 同画像组合（专业+年级+层次+技能+兴趣+目标）全站访客共享一次生成 |
-| 按需触发 | 访客点按钮才调用，无人点 = 零消耗 |
-| 每日限频 | 每个访客每天最多 6 次真实生成（缓存命中不计次） |
-| 精简数据 | 只传 83 项竞赛的核心字段，单次约 6k tokens ≈ **0.02 元** |
+| Cloudflare Worker | 免费（每天 10 万次请求额度，用不完） |
+| DeepSeek | 约 **0.02 元/次**生成；相同画像命中缓存 **0 元**；月成本预计 **< 5 元** |
 
-## 常见问题
+## 不想接了？
 
-- **详情面板看不到 AI 区块**：`AI_ENDPOINT` 还是空串（未接入，自动隐藏）。
-- **提示「该访客今日生成次数已达上限」**：限频生效，次日恢复；其他访客的同画像缓存仍可直接用。
-- **提示 DeepSeek 调用失败**：检查 `DEEPSEEK_KEY` 是否有效、账户是否有余额。
-- **想清空缓存重新生成**：Cloudflare → KV → `AI_CACHE` → 删除对应 key（`rec:开头`）。
+**什么都不用做**——没接入前 AI 区块在页面上自动隐藏，网站所有功能照常。
