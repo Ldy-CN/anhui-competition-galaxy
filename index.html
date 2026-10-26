@@ -424,7 +424,7 @@
 </div>
 
 
-<div id="aiBar">⚠ 本站全部内容由 AI 依据各赛事官网公开通知整理生成，仅供参考 · 报名信息请以官网最新通知为准 · <span id="aiMore">查看完整声明</span> · <span id="fbOpen">💬 反馈纠错</span><span id="visitStat" style="display:none"> · 👁 本站累计访问 <b id="busuanzi_value_site_pv" style="color:#7ee0a8">…</b> 次</span></div>
+<div id="aiBar">⚠ 本站全部内容由 AI 依据各赛事官网公开通知整理生成，仅供参考 · 报名信息请以官网最新通知为准 · <span id="aiMore">查看完整声明</span> · <span id="fbOpen">💬 反馈纠错</span><span id="visitStat" style="display:none"> · 👁 本站累计被访问 <b id="busuanzi_value_site_pv" style="color:#7ee0a8">…</b> 次</span></div>
 
 <div id="fbModal">
   <div class="aim">
@@ -1899,14 +1899,13 @@ searchClear.onclick = ()=>{
   modal.addEventListener('click', e => { if (e.target === modal) modal.classList.remove('open'); });
 })();
 
-/* ---- 数据监控状态展示（在线时读取 Actions 定时刷新的状态文件；离线静默跳过） ---- */
+/* ---- 数据监控状态展示（在线时读取 Actions 定时刷新的状态文件；离线静默跳过） ----
+   只显示「数据更新于哪一天」：优先 AI 自动更新的日期，否则回退最近检查日 ---- */
 fetch('monitor/monitor-state.json').then(r => r.ok ? r.json() : null).then(st => {
   if (!st || !st.lastCheck) return;
-  const d = new Date(st.lastCheck);
-  const everChanged = Object.values(st.sources || {}).filter(s => s.lastChanged).length;
+  const d = new Date(st.dataUpdatedAt || st.lastCheck);
   const span = document.createElement('span');
-  span.innerHTML = ' · 🔄 官网监控：最近自动检查 ' + (d.getMonth()+1) + '月' + d.getDate() + '日' +
-    (everChanged ? ' · <b style="color:#facc15">' + everChanged + ' 个来源曾检测到官网更新</b>（详见仓库 Issues）' : ' · 各来源无变化');
+  span.innerHTML = ' · 🔄 数据更新于 <b style="color:#facc15">' + (d.getMonth()+1) + '月' + d.getDate() + '日</b>';
   document.getElementById('aiBar').appendChild(span);
 }).catch(()=>{});
 
