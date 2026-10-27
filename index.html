@@ -1630,6 +1630,32 @@ window.__listFallback();
 window.__items = items;   // 调试/测试钩子
 /* ---- 详情面板 ---- */
 const panel = document.getElementById('panel');
+/* ---- 手机返回手势导航栈：站内状态（面板/视图/弹窗）推入历史，返回手势=回退站内状态而非退出网站 ---- */
+const gxyStack = [];
+let gxySuppress = null;
+function gxyPush(tag){
+  gxyStack.push(tag);
+  try { history.pushState({ gxy: tag }, ''); } catch(e){}
+}
+function gxyPop(tag){   // 手动关闭时弹掉对应历史；产生的 popstate 由 suppress 吸收，避免重复动作
+  const i = gxyStack.lastIndexOf(tag);
+  if (i < 0) return;
+  gxyStack.splice(i, 1);
+  if (gxyStack.length === i) { gxySuppress = tag; try { history.back(); } catch(e){} }
+}
+window.addEventListener('popstate', () => {
+  if (gxySuppress) { gxySuppress = null; return; }
+  const top = gxyStack.pop();
+  if (top === 'panel') { panel.classList.remove('open'); window.__selectedItem = null; }
+  else if (top === 'pf') {
+    document.getElementById('pfPanel').classList.remove('open');
+    document.getElementById('pfMask').classList.remove('open');
+  }
+  else if (top === 'list') switchView('3d', true);
+  else if (top === 'ai') document.getElementById('aiModal').classList.remove('open');
+  else if (top === 'fb') document.getElementById('fbModal').classList.remove('open');
+});
+
 function openPanel(it){
   window.__selectedItem = it;
   document.getElementById('pCat').textContent = catName(it.cat);
@@ -1725,10 +1751,14 @@ function openPanel(it){
       <a class="fixlink" target="_blank" rel="noopener" href="https://github.com/Ldy-CN/anhui-competition-galaxy/issues/new?title=%5B%E4%BF%A1%E6%81%AF%E7%BA%A0%E9%94%99%5D%20${encodeURIComponent(it.name)}&body=%E7%AB%9E%E8%B5%9B%E5%90%8D%E7%A7%B0%EF%BC%9A${encodeURIComponent(it.name)}%0A%E9%94%99%E8%AF%AF%E5%86%85%E5%AE%B9%EF%BC%9A%0A%E6%AD%A3%E7%A1%AE%E4%BF%A1%E6%81%AF%EF%BC%88%E9%99%84%E5%AE%98%E7%BD%91%E9%93%BE%E6%8E%A5%EF%BC%89%EF%BC%9A">纠错此条目</a>
     </div>
   `;
+  if (!panel.classList.contains('open')) gxyPush('panel');
   panel.classList.add('open');
 }
 
-function closePanel(){ panel.classList.remove('open'); window.__selectedItem=null; }
+
+function closePanelCore(){ panel.classList.remove('open'); window.__selectedItem=null; }
+function closePanel(){ closePanelCore(); gxyPop('panel'); }
+document.getElementById('pClose').onclick = closePanel;
 bindTap(document.getElementById('pClose'), closePanel);
 
 
@@ -1779,11 +1809,12 @@ sbU.onclick = ()=>{ sortMode='urgent'; sbU.classList.add('on'); sbS.classList.re
 const lv = document.getElementById('listView');
 document.getElementById('v3d').onclick = ()=>switchView('3d');
 document.getElementById('vList').onclick = ()=>switchView('list');
-function switchView(v){
+function switchView(v, silent){
   document.getElementById('v3d').classList.toggle('on', v==='3d');
   document.getElementById('vList').classList.toggle('on', v==='list');
   lv.style.display = v==='list' ? 'block' : 'none';
   /* 榜单视图下自动收起左下角横幅，避免遮挡卡片（3D 视图恢复用户偏好） */
+  if (v === 'list' && !silent) gxyPush('list'); else if (v === '3d' && !silent) gxyPop('list');
   const bar = document.getElementById('liveBar');
   if (v === 'list'){ bar.classList.add('collapsed'); document.getElementById('liveArrow').textContent = '▲'; }
   else {
@@ -1870,7 +1901,12 @@ document.getElementById('legendCats').innerHTML = CATS.map(c=>
 (function profilePanel(){
   const box = document.getElementById('pfPanel');
   const mask = document.getElementById('pfMask');
-  const setOpen = o => { box.classList.toggle('open', o); mask.classList.toggle('open', o); };
+  const setOpen = o => {
+    const was = box.classList.contains('open');
+    box.classList.toggle('open', o); mask.classList.toggle('open', o);
+    if (o && !was) gxyPush('pf'); else if (!o && was) gxyPop('pf');
+  };
+  window.pfSetOpen = setOpen;   // 供返回手势导航栈外部调用
   document.getElementById('pfOpen').onclick = ()=> setOpen(true);
   bindTap(document.getElementById('pfClose'), ()=> setOpen(false));
   bindTap(mask, ()=> setOpen(false));   // 手机上点面板外关闭（touch 与 click 均可靠）
@@ -1984,8 +2020,8 @@ document.getElementById('legendCats').innerHTML = CATS.map(c=>
 /* ---- AI 声明模态框 ---- */
 (function aiNotice(){
   const modal = document.getElementById('aiModal');
-  document.getElementById('aiMore').onclick = ()=> modal.classList.add('open');
-  document.getElementById('aiClose').onclick = ()=> modal.classList.remove('open');
+  document.getElementById('aiMore').onclick = ()=>{ modal.classList.add('open'); gxyPush('ai'); };
+  document.getElementById('aiClose').onclick = ()=>{ modal.classList.remove('open'); gxyPop('ai'); };
   modal.addEventListener('click', e => { if (e.target === modal) modal.classList.remove('open'); });
 })();
 
@@ -2015,10 +2051,10 @@ searchClear.onclick = ()=>{
 /* ---- 反馈模态框 ---- */
 (function feedbackPanel(){
   const modal = document.getElementById('fbModal');
-  document.getElementById('fbOpen').onclick = ()=> modal.classList.add('open');
+  document.getElementById('fbOpen').onclick = ()=>{ modal.classList.add('open'); gxyPush('fb'); };
   const closeBtn = modal.querySelector('.fbClose');
-  closeBtn.onclick = ()=> modal.classList.remove('open');
-  modal.addEventListener('click', e => { if (e.target === modal) modal.classList.remove('open'); });
+  closeBtn.onclick = ()=>{ modal.classList.remove('open'); gxyPop('fb'); };
+  modal.addEventListener('click', e => { if (e.target === modal) { modal.classList.remove('open'); gxyPop('fb'); } });
 })();
 
 /* ---- 数据监控状态展示（在线时读取 Actions 定时刷新的状态文件；离线静默跳过） ----
