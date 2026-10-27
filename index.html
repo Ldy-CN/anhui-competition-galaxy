@@ -515,6 +515,50 @@ const CATS = [
 /* ---------- 个性化推荐引擎：浏览者画像 → 动态推荐分 ---------- */
 /* 专业两级结构：大类 → 细分专业；每细分专业一行六维权重 [smart,mech,elec,innov,basic,arts]（满分 35） */
 const DIM_ORDER = ['smart','mech','elec','innov','basic','arts'];
+/* 专科：职业教育专业目录（2026 年 7 月更新）——学校层次选「专科」时启用 */
+const VOCATIONAL = [
+  { label:'农林牧渔大类', subs:['现代农业技术','园艺技术','设施农业与装备','现代农业装备应用技术','智慧农业技术与装备','农产品加工与质量检测','休闲农业经营与管理','现代农业经济管理','林业技术','园林技术','动物医学','宠物医疗技术','水产养殖技术'] },
+  { label:'资源环境与安全大类', subs:['国土资源调查与管理','宝玉石鉴定与加工','工程地质勘查','岩土工程技术','测绘工程技术','无人机测绘技术','安全工程技术','应急技术与管理'] },
+  { label:'能源动力与材料大类', subs:['发电厂及变电站运行与维护','供用电技术','光伏工程技术','风力发电工程技术','氢能技术应用','钢铁智能冶金技术','储能材料技术','材料工程技术'] },
+  { label:'土木建筑大类', subs:['建筑工程技术','装配式建筑工程技术','建筑钢结构工程技术','智能建造技术','建筑智能化工程技术','工程造价','建筑设计','建筑装饰工程技术'] },
+  { label:'水利大类', subs:['水利工程','智慧水利工程','水利水电建筑工程','水务管理','水利水电工程智能施工'] },
+  { label:'装备制造大类', subs:['机械设计与制造','数字化设计与制造技术','数控技术','机械制造及自动化','工业设计','工业工程技术','材料成型及控制技术','智能焊接技术','增材制造技术','模具设计与制造','智能制造装备技术','机电设备技术','电机与电器技术','新能源装备技术','电梯工程技术','低空飞行器装备技术','机电一体化技术','智能机电技术','智能控制技术','智能机器人技术','工业机器人技术','电气自动化技术','工业互联网应用','计量测试与应用技术','具身智能机器人技术','铁道机车车辆制造与维护','船舶工程技术','汽车制造与试验技术','新能源汽车技术','汽车电子技术','智能网联汽车技术'] },
+  { label:'生物与化工大类', subs:['食品生物技术','应用化工技术','精细化工技术','化工智能制造工程技术','分析检验技术','生物制药技术'] },
+  { label:'轻工纺织大类', subs:['化妆品工程技术','包装工程技术','现代纺织工程技术','服装工程技术','纺织品设计'] },
+  { label:'食品药品与粮食大类', subs:['食品智能加工技术','食品质量与安全','食品营养与健康','食品检验检测技术','药品生产技术','药物制剂技术','药品质量与安全','智能医疗装备技术','医用电子仪器技术','医疗器械维护与管理','康复工程技术'] },
+  { label:'交通运输大类', subs:['铁道工程技术','铁道机车运用与维护','铁道供电技术','铁道信号自动控制','铁道交通运营管理','道路与桥梁工程技术','智能交通技术','汽车技术服务与营销','汽车检测与维修技术','新能源汽车检测与维修技术','航海技术','轮机工程技术','空中乘务','飞机机电设备维修','无人机应用技术','城市轨道交通运营管理'] },
+  { label:'电子与信息大类', subs:['电子信息工程技术','物联网应用技术','应用电子技术','汽车智能技术','智能产品开发与应用','计算机应用技术','计算机网络技术','软件技术','数字媒体技术','大数据技术','云计算技术应用','信息安全技术应用','虚拟现实技术应用','人工智能技术应用','嵌入式技术应用','工业互联网技术','工业软件开发技术','动漫制作技术','数字孪生应用技术','智能体技术应用','现代通信技术','卫星通信与导航技术','集成电路技术','微电子技术'] },
+  { label:'医药卫生大类', subs:['临床医学','护理','助产','药学','中医学','针灸推拿','医学检验技术','医学影像技术','康复治疗技术','口腔医学技术','眼视光技术','婴幼儿托育'] },
+  { label:'财经商贸大类', subs:['财税大数据应用','金融服务与管理','金融科技应用','大数据与财务管理','大数据与会计','国际经济与贸易','市场营销','电子商务','跨境电子商务','商务数据分析与管理','现代物流管理','供应链管理'] },
+  { label:'旅游大类', subs:['旅游管理','酒店管理','研学旅行策划与管理','会展策划与管理','烹饪与餐饮管理','营养配餐'] },
+  { label:'文化艺术大类', subs:['艺术设计','视觉传达设计','数字媒体艺术设计','产品艺术设计','服装与服饰设计','环境艺术设计','游戏艺术设计','音乐表演','舞蹈表演','舞台艺术设计','文化创意与策划'] },
+  { label:'新闻传播大类', subs:['网络新闻与传播','出版策划与编辑','数字出版','播音与主持','广播影视节目制作','影视编导','影视动画','摄影摄像技术','融媒体技术与运营','网络直播与运营'] },
+  { label:'教育与体育大类', subs:['早期教育','学前教育','小学教育','小学英语教育','音乐教育','美术教育','体育教育','现代教育技术','商务英语','应用日语','社会体育','运动训练','体育保健与康复'] },
+  { label:'公安与司法大类', subs:['刑事科学技术','网络安全与执法','刑事侦查','法律事务','司法信息技术','社区矫正'] },
+  { label:'公共管理与服务大类', subs:['社会工作','社区公共事务管理','人力资源管理事务','现代家政服务与管理','智慧健康养老服务'] },
+];
+/* 专科大类六维权重 [smart,mech,elec,innov,basic,arts] */
+const VOC_ROWS = {
+  '农林牧渔大类':[12,10,8,12,26,8],
+  '资源环境与安全大类':[14,14,12,12,26,6],
+  '能源动力与材料大类':[22,20,14,12,26,6],
+  '土木建筑大类':[16,18,10,16,30,8],
+  '水利大类':[14,16,10,14,32,6],
+  '装备制造大类':[30,30,24,16,20,8],
+  '生物与化工大类':[14,10,12,12,30,6],
+  '轻工纺织大类':[10,12,8,20,16,20],
+  '食品药品与粮食大类':[12,10,10,14,28,8],
+  '交通运输大类':[16,18,12,14,24,8],
+  '电子与信息大类':[24,14,30,18,22,10],
+  '医药卫生大类':[6,6,8,12,30,8],
+  '财经商贸大类':[6,4,8,30,18,14],
+  '旅游大类':[4,4,4,22,14,16],
+  '文化艺术大类':[4,4,4,20,10,30],
+  '新闻传播大类':[4,4,6,22,12,28],
+  '教育与体育大类':[4,4,4,20,16,20],
+  '公安与司法大类':[4,6,8,16,24,6],
+  '公共管理与服务大类':[4,4,6,24,18,14],
+};
 const MAJOR_LABELS = {
   econ:'经济学类', liberal:'文史法哲类', educ:'教育学类', sci:'理学类',
   mech:'机械类', auto:'自动化类', elec:'电子信息类', cs:'计算机/软件类', energy:'能源动力类', civil:'土木建筑类',
@@ -525,6 +569,7 @@ const MAJORS = {
   econ: { label:'经济学类', subs:{
     '金融学/投资学':[8,6,12,32,22,20],
     '国际经济与贸易':[8,8,12,32,18,26],
+    '数字经济':[16,10,22,28,24,12],
   }},
   liberal: { label:'文史法哲类', subs:{
     '法学':[6,4,6,26,12,35],
@@ -535,12 +580,15 @@ const MAJORS = {
   }},
   educ: { label:'教育学类（含师范方向）', subs:{
     '教育学/各学科师范方向':[9,7,12,22,16,30],
-    '应用心理学':[10,6,14,26,20,26],
+    '体育学类':[8,8,8,20,18,22],
   }},
   sci: { label:'理学类', subs:{
     '数学与应用数学':[22,14,26,24,35,14],
     '物理学':[20,14,26,20,35,14],
     '应用化学':[16,12,18,18,32,14],
+    '地理/地质/大气科学':[16,12,18,16,32,10],
+    '统计学类':[18,12,24,22,32,10],
+    '心理学类':[10,6,16,24,26,16],
   }},
   mech: { label:'机械类', subs:{
     '机械工程':[26,32,24,18,28,8],
@@ -562,44 +610,63 @@ const MAJORS = {
     '增材制造工程':[28,28,20,17,26,12],
     '智能交互设计':[12,18,20,26,10,30],
     '应急装备技术与工程':[24,28,20,18,24,10],
+    '农林智能装备工程':[24,28,20,16,26,10],
+    '真空工程与技术':[24,28,22,16,28,8],
   }},
   auto: { label:'自动化类', subs:{
     '自动化':[26,26,36,18,26,8],
     '轨道交通信号与控制':[22,26,34,16,28,8],
     '机器人工程':[30,26,33,19,22,10],
+    '邮政工程':[22,20,32,18,24,8],
+    '核电技术与控制工程':[24,24,34,16,28,8],
     '智能装备与系统':[30,28,30,18,24,9],
     '工业智能':[28,22,34,18,26,8],
+    '智能工程与创意设计':[22,20,28,24,18,16],
   }},
   elec: { label:'电子信息类', subs:{
     '电子信息工程':[30,22,35,18,25,9],
+    '电子科学与技术':[24,18,34,16,27,9],
     '通信工程':[24,16,35,18,24,9],
     '微电子科学与工程':[22,14,33,16,28,9],
+    '光电信息科学与工程':[24,16,32,16,28,9],
+    '信息工程':[26,18,34,18,25,9],
+    '集成电路设计与集成系统':[18,14,32,15,30,8],
     '人工智能':[26,14,33,26,22,12],
     '物联网工程':[26,18,33,22,22,10],
-    '光电信息科学与工程':[24,16,32,16,28,9],
-    '电子科学与技术':[24,18,34,16,27,9],
-    '集成电路设计与集成系统':[18,14,32,15,30,8],
+    '电气工程及其自动化':[28,28,32,16,26,8],
+    '智能电网信息工程':[24,22,34,16,28,8],
+    '光源与照明':[22,24,28,16,24,8],
+    '电气工程与智能控制':[26,26,32,16,26,8],
+    '电动载运工程':[26,26,30,16,26,8],
   }},
   cs: { label:'计算机/软件类', subs:{
     '计算机科学与技术':[22,14,35,27,26,12],
     '软件工程':[20,12,35,29,25,12],
     '网络工程':[20,12,34,26,25,12],
-    '数据科学与大数据技术':[20,12,30,28,32,12],
-    '智能科学与技术':[24,14,33,27,24,12],
+    '信息安全':[16,10,34,20,28,8],
+    '物联网工程':[26,18,33,22,22,10],
     '数字媒体技术':[14,14,24,26,14,30],
+    '智能科学与技术':[24,14,33,27,24,12],
+    '数据科学与大数据技术':[20,12,30,28,32,12],
     '网络空间安全':[16,10,34,20,28,8],
+    '虚拟现实技术':[16,12,28,26,18,20],
+    '区块链工程':[14,10,32,24,24,10],
+    '工业软件':[24,16,34,20,24,8],
   }},
   energy: { label:'能源动力类', subs:{
     '能源与动力工程':[35,28,24,18,32,9],
+    '能源与环境系统工程':[32,26,24,18,30,9],
     '新能源科学与工程':[35,26,24,20,30,9],
     '储能科学与工程':[33,24,26,20,30,9],
     '氢能科学与工程':[33,24,24,19,30,8],
+    '可持续能源':[32,24,24,18,30,8],
   }},
   civil: { label:'土木建筑类', subs:{
     '土木工程':[22,20,16,18,35,11],
     '建筑环境与能源应用工程':[26,22,18,17,31,11],
-    '工程管理':[20,16,14,26,28,14],
+    '给排水科学与工程':[20,18,16,16,32,10],
     '智能建造':[28,20,20,18,33,10],
+    '工程管理':[20,16,14,26,28,14],
   }},
   med: { label:'医学类', subs:{
     '临床医学':[6,4,10,18,30,22],
@@ -631,6 +698,10 @@ Object.keys(MAJORS).forEach(g => {
     Math.round(names.reduce((s,nm)=>s+grp.subs[nm][i],0) / names.length));
 });
 function majorRowOf(pf){
+  if (pf.school === 'zk') {   // 专科：按职业教育大类取权重
+    const r = VOC_ROWS[pf.major] || [16,14,16,18,22,12];
+    const o = {}; DIM_ORDER.forEach((k,i)=> o[k] = r[i]); return o;
+  }
   const grp = MAJORS[pf.major] || MAJORS.other;
   if (grp.subs && pf.sub && grp.subs[pf.sub]) {
     const o = {}; DIM_ORDER.forEach((k,i)=> o[k] = grp.subs[pf.sub][i]); return o;
@@ -698,6 +769,7 @@ let profile = (() => {
     if (typeof o.goal === 'string') o.goals = o.goal ? [o.goal] : [];   // 旧版单选 → 多选
     if (o.skills) o.skills = o.skills.reduce((acc,k)=>acc.concat(SKILL_MIGRATE[k]||[k]), []);
     if (o.major === 'mech' && o.sub === '机器人工程') o.major = 'auto';   // 专业目录迁移：机器人工程属自动化类
+    if (o.school === 'zk' && o.major && !VOCATIONAL.some(v => v.label === o.major)) { o.major=''; o.sub=''; o.skills=o.skills||[]; o.interests=o.interests||[]; o.goals=o.goals||[]; }   // 专科层次旧本科大类：清空重选
     if (o.major !== (JSON.parse(localStorage.getItem('gxjs_profile')||'{}').major||'')) {
       try { localStorage.setItem('gxjs_profile', JSON.stringify(o)); } catch(e){}   // 迁移后立即回写，避免旧值残留
     }
@@ -1804,18 +1876,28 @@ document.getElementById('legendCats').innerHTML = CATS.map(c=>
   bindTap(mask, ()=> setOpen(false));   // 手机上点面板外关闭（touch 与 click 均可靠）
 
   const mSel = document.getElementById('pfMajor');
-  Object.keys(MAJOR_LABELS).forEach(k=>{
-    const o = document.createElement('option'); o.value = k; o.textContent = MAJOR_LABELS[k]; mSel.appendChild(o);
-  });
-  const blank = document.createElement('option'); blank.value=''; blank.textContent='（未选择）'; mSel.insertBefore(blank, mSel.firstChild);
-  const subSel = document.getElementById('pfSub');
   const sSel = document.getElementById('pfSchool');
+  function fillMajors(){   // 学校层次联动：专科=职业教育目录大类，本科=普通本科目录大类
+    const zk = sSel.value === 'zk';
+    mSel.innerHTML = '';
+    const blank = document.createElement('option'); blank.value=''; blank.textContent='（未选择）'; mSel.appendChild(blank);
+    if (zk) VOCATIONAL.forEach(v => { const o = document.createElement('option'); o.value = v.label; o.textContent = v.label; mSel.appendChild(o); });
+    else Object.keys(MAJOR_LABELS).forEach(k => { const o = document.createElement('option'); o.value = k; o.textContent = MAJOR_LABELS[k]; mSel.appendChild(o); });
+  }
+  fillMajors();
+  const subSel = document.getElementById('pfSub');
   Object.keys(SCHOOL_LABELS).forEach(k=>{
     const o = document.createElement('option'); o.value = k; o.textContent = SCHOOL_LABELS[k]; sSel.appendChild(o);
   });
   const blankS = document.createElement('option'); blankS.value=''; blankS.textContent='（未选择）'; sSel.insertBefore(blankS, sSel.firstChild);
   function fillSubs(){
     subSel.innerHTML = '';
+    if (sSel.value === 'zk') {   // 专科：细分专业 = 职业教育大类下的专业列表
+      const grpV = VOCATIONAL.find(v => v.label === mSel.value);
+      if (!grpV || !grpV.subs.length) { const o = document.createElement('option'); o.value=''; o.textContent='（该大类无细分）'; subSel.appendChild(o); subSel.disabled = true; return; }
+      grpV.subs.forEach(nm => { const o = document.createElement('option'); o.value = nm; o.textContent = nm; subSel.appendChild(o); });
+      subSel.disabled = false; return;
+    }
     const grp = MAJORS[mSel.value];
     if (!grp || !grp.subs){
       const o = document.createElement('option'); o.value = ''; o.textContent = '（该大类无细分）'; subSel.appendChild(o);
@@ -1827,6 +1909,7 @@ document.getElementById('legendCats').innerHTML = CATS.map(c=>
       const o = document.createElement('option'); o.value = name; o.textContent = name; subSel.appendChild(o);
     });
   }
+  sSel.addEventListener('change', ()=>{ fillMajors(); profile.major=''; profile.sub=''; mSel.value=''; fillSubs(); });
   mSel.addEventListener('change', ()=>{ fillSubs(); profile.sub = ''; subSel.value = ''; });
   const gRow = document.getElementById('pfGrade');
   ['大一','大二','大三','大四'].forEach((t,i)=>{
@@ -1860,9 +1943,10 @@ document.getElementById('legendCats').innerHTML = CATS.map(c=>
   });
 
   function syncUI(){
+    sSel.value = profile.school;
+    fillMajors();
     mSel.value = profile.major; fillSubs(); subSel.value = profile.sub || '';
     if (!subSel.value && subSel.options.length) subSel.selectedIndex = 0;
-    sSel.value = profile.school;
     /* 完成度提示：7 个维度中已填几项 */
     const done = ['major','grade','school'].filter(k => profile[k] !== '' && profile[k] != null).length
       + ((profile.skills||[]).length ? 1 : 0) + ((profile.interests||[]).length ? 1 : 0) + ((profile.goals||[]).length ? 1 : 0)
@@ -1882,15 +1966,15 @@ document.getElementById('legendCats').innerHTML = CATS.map(c=>
   }
   syncUI();
 
-  document.getElementById('pfApply').onclick = ()=>{
+  document.getElementById('pfApply').addEventListener('click', ()=>{
     const skills = Array.prototype.map.call(sRow.querySelectorAll('.pchip.on'), x=>x.dataset.s);
     const interests = Array.prototype.map.call(iRow.querySelectorAll('.pchip.on'), x=>x.dataset.i);
     const goals = Array.prototype.map.call(g2Row.querySelectorAll('.pchip.on'), x=>x.dataset.g2);
     const g = gRow.querySelector('.pchip.on');
     applyProfile({ major: mSel.value, sub: subSel.disabled ? '' : subSel.value, grade: g ? +g.dataset.g : '',
                    school: sSel.value, skills: skills, interests: interests, goals: goals });
-    box.classList.remove('open');
-  };
+    setOpen(false);   // 面板+遮罩一起关（此前只关面板，遮罩残留挡住全屏 = “叉不掉”的真凶）
+  });
   document.getElementById('pfReset').onclick = ()=>{
     applyProfile({ major:'', sub:'', grade:'', school:'', skills:[], interests:[], goals:[] });   // 重置 = 全部未选
     syncUI();
