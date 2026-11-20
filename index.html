@@ -2611,22 +2611,22 @@ function layoutCards(){
     const a0 = ci*Math.PI/3 + Math.PI/6;
     /* 球体环绕：每类别占一个 60° 经度扇区，卡片沿纬度 -50°~+50° 展开；
        密集扇区（>8）分两条经度线（a0±11°）各排一半，纬度交错半步防并肩 */
-    const twoLane = list.length > 8;
+    const twoLane = list.length > 7;
     const half = Math.ceil(list.length/2);
-    const shrink = list.length > 11 ? 0.80 : 1;
+    const shrink = list.length > 11 ? 0.78 : 1;
     list.forEach((it,idx)=>{
       let lane = 0, i2 = idx, n2 = list.length, lonOff = 0;
       if (twoLane){
         if (idx < half){ lane = 0; i2 = idx; n2 = half; lonOff = -11; }
         else           { lane = 1; i2 = idx - half; n2 = list.length - half; lonOff = 11; }
       }
-      const latDeg = -50 + ((i2 + (lane?0.5:0.0)) + .5)/n2 * 100;   // 纬度均匀展开（第二线交错半步）
+      const latDeg = -42 + ((i2 + (lane?0.5:0.0)) + .5)/n2 * 84;   // 纬度 -42~+42 展开（边缘卡减少侧对相机挤压）
       const lat = latDeg*Math.PI/180;
       const lonA = a0 + (lonOff*Math.PI/180);
       const r = scoreR(it.score);
       const y = r*Math.sin(lat);
       const rr = r*Math.cos(lat);
-      const w = 9.4*shrink;
+      const w = 8.4*shrink;
       const mat = new THREE.MeshBasicMaterial({map:makeCard(it),transparent:true,side:THREE.DoubleSide,opacity:1});
       it.baseBright = (0.82 + (it.score/100)*0.5) * 1.8;   // 分数基准亮度 ×1.8（实际显示由深度雾调制：面向用户清晰、背面朦胧）
       mat.color.setScalar(it.baseBright);
@@ -2744,7 +2744,7 @@ function animCards(t){
     const ts = (it===hovered||it===selected) ? b*(it._targetOpacity>.5?1.14:it._targetScale) : b*it._targetScale;
     m.scale.x += (ts-m.scale.x)*.15;
     m.scale.y = m.scale.x; m.scale.z = 1;
-    const amp = focus ? .12 : .35;   // 悬停/选中时浮动减弱，稳定指针命中（防抽搐）
+    const amp = focus ? .10 : .22;   // 悬停/选中时浮动减弱，稳定指针命中（防抽搐）
     m.position.y = it.baseY + Math.sin(t*.001 + it.baseA*3)*amp;
   });
 }
