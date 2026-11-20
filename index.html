@@ -70,9 +70,9 @@
     display:flex;flex-direction:column;gap:6px;pointer-events:none;transition:background .2s}
   #liveBar{background:rgba(10,14,28,.88);border:1px solid var(--line);border-radius:12px;padding:9px 13px}
   #liveBar.collapsed{padding:7px 12px}
-  #liveBar.collapsed .liveChips{display:none}
+  #liveBar.collapsed .liveChips{display:none;overflow-y:auto;min-height:0;-webkit-overflow-scrolling:touch}
   #liveBar.collapsed #aiMore,#liveBar.collapsed #fbOpen{display:none}
-  .liveTitle{font-size:12px;color:var(--sub);display:flex;align-items:center;gap:6px;cursor:pointer;pointer-events:auto;user-select:none;min-height:44px;touch-action:manipulation;width:100%;border:none;background:transparent;text-align:left}
+  .liveTitle{font-size:12px;color:var(--sub);display:flex;align-items:center;gap:6px;cursor:pointer;pointer-events:auto;user-select:none;min-height:44px;touch-action:none;width:100%;border:none;background:transparent;text-align:left}
   #liveArrow{font-size:9px;margin-left:4px;transition:transform .2s}
   #liveBar.collapsed #liveArrow{transform:rotate(180deg)}
   #liveBar.collapsed #liveTitleText{font-size:11.5px}
@@ -236,7 +236,7 @@
     #scoreMin,#scoreMax{width:76px}
     #sensSel{width:70px}
     .scoreLabel{font-size:11px}
-    #liveBar{left:10px;right:10px;bottom:calc(52px + env(safe-area-inset-bottom, 0px));max-width:calc(100vw - 20px);max-height:42vh;overflow-y:auto;-webkit-overflow-scrolling:touch}
+    #liveBar{left:10px;right:10px;bottom:calc(52px + env(safe-area-inset-bottom, 0px));max-width:calc(100vw - 20px);max-height:42vh}
     .liveTitle{font-size:11px}
     /* 声明条贴底全宽（Pad 端此前被左下横幅遮挡不可见），横幅上移至其上方 */
     #aiBar{bottom:calc(10px + env(safe-area-inset-bottom, 0px));left:10px;right:10px;transform:none;max-width:calc(100vw - 20px);font-size:10px;padding:5px 10px;z-index:17}
@@ -414,7 +414,7 @@
 </div>
 
 <div id="liveBar">
-  <button class="liveTitle" id="liveToggle" title="点击收起 / 展开" style="all:unset;cursor:pointer"><span class="liveDot"></span><span id="liveTitleText">今天（10 月 24 日）就可以报名 / 重点关注的窗口</span><span id="liveArrow">▼</span></button>
+  <button class="liveTitle" id="liveToggle" title="点击收起 / 展开" style="pointer-events:auto"><span class="liveDot"></span><span id="liveTitleText">今天（10 月 24 日）就可以报名 / 重点关注的窗口</span><span id="liveArrow">▼</span></button>
   <div class="liveChips" id="liveChips"></div>
 </div>
 
@@ -1772,9 +1772,8 @@ bindTap(document.getElementById('pClose'), closePanel);
 /* ---- 触屏可靠点击绑定：click 与 pointerup 双监听 + 300ms 去抖（微信 X5/安卓 WebView 的 div click 兼容） ---- */
 function bindTap(el, fn){
   let last = 0;
-  const h = e => { e.preventDefault(); e.stopPropagation(); const t = Date.now(); if (t - last < 300) return; last = t; fn(e); };
-  el.addEventListener('click', h);
-  el.addEventListener('pointerup', h, { passive: false });
+  const h = () => { const t = Date.now(); if (t - last < 300) return; last = t; fn(); };
+  el.addEventListener('click', h);   // 只绑 click：pointerup 的 preventDefault 会把合成 click 挤到下层元素（穿透），实测禁用
 }
 
 /* ---- 工具栏 ---- */
